@@ -128,6 +128,19 @@ preferences.spectrogram.freq_high = 250;
 preferences.spectrogram.freq_step_size = 2;
 preferences.spectrogram.freq_range = [preferences.spectrogram.freq_low:preferences.spectrogram.freq_step_size:preferences.spectrogram.freq_high];
 
+% My Spectrogram
+preferences.my_spectrogram.show = false;
+preferences.my_spectrogram.channel = 1;
+preferences.my_spectrogram.window = 0.2;
+preferences.my_spectrogram.freq_low = 1;
+preferences.my_spectrogram.freq_high = 100;
+
+% Channel Spectrogram
+preferences.channel_spectrogram.show = false;
+preferences.channel_spectrogram.window = 0.2;
+preferences.channel_spectrogram.freq_low = 1;
+preferences.channel_spectrogram.freq_high = 20;
+
 % CSD
 preferences.CSD.show = false;
 
