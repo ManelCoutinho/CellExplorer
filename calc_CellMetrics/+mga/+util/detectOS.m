@@ -83,21 +83,26 @@ elseif isunix
             % determine OS version
             OSVersion = regexpi(result, '(?<=\nVERSION_ID=)"*\d[.\d]*"*(?=\n)', 'match'); % VERSION_ID=... (longest match)
             OSVersion = strrep(OSVersion, '"', ''); % remove quotes
-        else
+        end
+        if (status == 0 || isempty(OS) || isempty(OSVersion))
             % check for output from lsb_release (more standardized than /etc/lsb-release itself)
             [status, result] = system('lsb_release -a');
             if (status == 0)
                 % add newline to beginning and end of output character vector (makes parsing easier)
                 result = sprintf('\n%s\n', result);
                 % determine OS
-                OS = regexpi(result, '(?<=\nDistributor ID:\t).*?(?=\n)', 'match'); % Distributor ID: ... (shortest match)
-                OS = lower(strtrim(OS));      % remove leading/trailing spaces, and make lowercase
-                if ~isempty(OS)
-                    % convert to character vector
-                    OS = OS{1};
+                if isempty(OS)
+                    OS = regexpi(result, '(?<=\nDistributor ID:\t).*?(?=\n)', 'match'); % Distributor ID: ... (shortest match)
+                    OS = lower(strtrim(OS));      % remove leading/trailing spaces, and make lowercase
+                    if ~isempty(OS)
+                        % convert to character vector
+                        OS = OS{1};
+                    end
                 end
                 % determine OS version
-                OSVersion = regexpi(result, '(?<=\nRelease:\t)\d[.\d]*(?=\n)', 'match'); % Release: ... (longest match)
+                if isempty(OSVersion)
+                    OSVersion = regexpi(result, '(?<=\nRelease:\t)\d[.\d]*(?=\n)', 'match'); % Release: ... (longest match)
+                end
             else
                 % extract information from /etc/*release or /etc/*version filename
                 [status, result] = system('ls -m /etc/*version');   % comma-delimited file listing
