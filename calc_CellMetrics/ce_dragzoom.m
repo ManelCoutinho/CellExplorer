@@ -323,11 +323,11 @@ Initialize(varargin{:})
         % initialize tool
         UserData = get(hFig, 'UserData');
         
-        if (isfield(UserData, 'axesinfo') && isWithStatus)
-            mAxesInfo = UserData.axesinfo;
-            mOrigCallbacks = UserData.origcallbacks;
-            mOrigFigName = UserData.origfigname;
-        else
+        % if (isfield(UserData, 'axesinfo') && isWithStatus)
+        %     mAxesInfo = UserData.axesinfo;
+        %     mOrigCallbacks = UserData.origcallbacks;
+        %     mOrigFigName = UserData.origfigname;
+        % else
             % first call dragzoom or call without enable status
 %             if ~isfield(UserData, 'origfigname')
 %                 mOrigFigName = get(hFig, 'Name');
@@ -359,7 +359,7 @@ Initialize(varargin{:})
             end
             
             set(hFig, 'UserData', UserData);    
-        end
+        % end
         
         DeleteOldTools();
         
