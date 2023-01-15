@@ -11,9 +11,9 @@ function [y, A] = WhitenSignal(x,varargin)
 
 %artype =2; %Signal processing toolbox
 artype =1; %arfit toolbox, (crushes sometimes with old version and single data type)
-if artype==1
-    addpath('/home/manuelc/matlab/CellExplorer-master/my_code/antsiro/arfit'); %TODO: change this
-end
+% if artype==1
+%     addpath('/home/manuelc/matlab/CellExplorer-master/my_code/antsiro/arfit'); %TODO: change this
+% end
 [window,CommonAR, ARmodel,ArOrder] = DefaultArgs(varargin,{[],1,[],1});
 ArOrder = ArOrder+1;
 Trans = 0;
@@ -73,6 +73,6 @@ end
 if Trans
     y =y';
 end
-if artype==1
-rmpath('/home/manuelc/matlab/CellExplorer-master/my_code/antsiro/arfit'); %TODO: change this
-end
+% if artype==1
+% rmpath('/home/manuelc/matlab/CellExplorer-master/my_code/antsiro/arfit'); %TODO: change this
+% end

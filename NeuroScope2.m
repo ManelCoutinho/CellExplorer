@@ -1,3 +1,4 @@
+
 function NeuroScope2(varargin)
 % % % % % % % % % % % % % % % % % % % % % % % % %
 % NeuroScope2 (BETA) is a visualizer for electrophysiological recordings. It was inspired by the original Neuroscope (http://neurosuite.sourceforge.net/)
@@ -303,6 +304,9 @@ end
             menuSelectedFcn = 'Callback';
         end
         uix.tracking('off')
+
+        % Cluster figure
+        UI.fig_cluster = figure('Name','Cluster','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter', 'none', 'DefaultLegendInterpreter', 'none', 'MenuBar', 'None');
         
         % % % % % % % % % % % % % % % % % % % % % %
         % Creating menu
@@ -634,6 +638,12 @@ end
         UI.panel.behavior.trialNumber = uicontrol('Parent',UI.panel.behavior.main,'Style', 'Edit', 'String', '', 'Units','normalized', 'Position', [0.01 0.01 0.485 0.20],'HorizontalAlignment','center','tooltip','Trial number','Callback',@gotoTrial);
         UI.panel.behavior.trialCount = uicontrol('Parent',UI.panel.behavior.main,'Style', 'Edit', 'String', 'nTrials', 'Units','normalized', 'Position', [0.505 0.01 0.485 0.20],'HorizontalAlignment','center','Enable','off');
         
+        % Cluster 
+        UI.panel.cluster.main = uipanel('Parent',UI.panel.other.main,'title','Clustering');
+        uicontrol('Parent',UI.panel.cluster.main,'Style', 'text', 'String', 'Algorithm', 'Units','normalized', 'Position', [0.01 0.70 0.4 0.24],'HorizontalAlignment','left','tooltip','Select algorithm to use');
+        UI.panel.cluster.algo = uicontrol('Parent',UI.panel.cluster.main,'Style', 'popup','String',{'Pablo''s','Deep Learning'}, 'value', UI.settings.cluster.algo, 'Units','normalized', 'Position', [0.41 0.86 0.58 0.12], 'HorizontalAlignment','left');
+        uicontrol('Parent',UI.panel.cluster.main,'Style','pushbutton','Units','normalized','Position',[0.34 0.02 0.32 0.48],'String','Calculate','Callback', @calculateCluster);
+
         % My Spectrogram
         UI.panel.my_spectrogram.main = uipanel('Parent',UI.panel.other.main,'title','My Spectrogram');
         UI.panel.my_spectrogram.showSpectrogram = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'checkbox','String','Show spectrogram', 'value', 0, 'Units','normalized', 'Position', [0.01 0.83 0.99 0.15],'Callback',@toggleMySpectrogram,'HorizontalAlignment','left');
@@ -718,9 +728,9 @@ end
         UI.panel.audio.rightChannel = uicontrol('Parent',UI.panel.audio.main,'Style', 'Edit', 'String', num2str(UI.settings.audioChannels(2)), 'Units','normalized', 'Position', [0.505 0 0.485 0.36],'HorizontalAlignment','center','tooltip','Right channel','Callback',@togglePlayAudio);
                 
         % Defining flexible panel heights
-        set(UI.panel.other.main, 'Heights', [280 110 95 140 95 80 95 50 90 90 90],'MinimumHeights',[300 120 100 150 165 120 150 50 90 90 90]);
+        set(UI.panel.other.main, 'Heights', [280 110 95 140 80 95 80 95 50 90 90 90],'MinimumHeights',[300 120 100 150 85 165 120 150 50 90 90 90]);
         UI.panel.other.main1.MinimumWidths = 218;
-        UI.panel.other.main1.MinimumHeights = 1428;
+        UI.panel.other.main1.MinimumHeights = 1513;
         
         % % % % % % % % % % % % % % % % % % % % % %
         % Lower info panel elements
@@ -2281,7 +2291,7 @@ end
                 % SpecWindow = 2^round(log2(UI.settings.my_spectrogram.window * sr)); % choose window length as power of two
             end
             
-            nFFT = SpecWindow * 4;
+            nFFT = SpecWindow * 2;
             display(SpecWindow);
             display(nFFT);
             % max(256,2p), where p = ⌈log2 Nw⌉, the
@@ -4684,6 +4694,29 @@ end
         uiresume(UI.fig);
     end
 
+    function calculateCluster(~,~)   
+        set(UI.fig_cluster,'Name',append('Cluster: ', UI.panel.cluster.algo.String{UI.panel.cluster.algo.Value}));
+        set(UI.fig_cluster,'visible','on')
+
+        s1 = dir(UI.data.fileName);
+        s2 = dir(UI.data.fileNameLFP);
+        if ~isempty(s1)
+            file = UI.data.filename;
+        elseif ~isempty(s2)
+            file = UI.data.fileNameLFP;
+        end
+        X = tsne_pablo(file, ephys.sr, [1 2 3 4 5], data.session.extracellular.nChannels);
+
+        % disp(size(y)); 45065   390 ---- 7929 * __ * 63 (channel size)
+        % disp(size(f)); 390     1
+        % disp(size(t)); 45065   1   ---- 7929 * 1
+
+        % Thoughts:
+        % t-SNE should go from N(samples)xD(dimensions aka number of chosen channels) to Nx2
+        % To backtrack the indices of both are the same
+        % Problem: I'll obtain a slice of spectrogram normalized across X channels due to the powerMean pre-processing
+
+    end
 
     function setSortingMetric(~,~)
         UI.params.sortingMetric = UI.panel.cell_metrics.sortingMetric.String{UI.panel.cell_metrics.sortingMetric.Value};
