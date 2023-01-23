@@ -306,7 +306,7 @@ end
         uix.tracking('off')
 
         % Cluster figure
-        UI.fig_cluster = figure('Name','Cluster','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter', 'none', 'DefaultLegendInterpreter', 'none', 'MenuBar', 'None');
+        UI.fig_cluster = figure('Name','Cluster','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter', 'none', 'DefaultLegendInterpreter', 'none', 'MenuBar', 'None', 'KeyPressFcn', @keyPressCluster);
         
         % % % % % % % % % % % % % % % % % % % % % %
         % Creating menu
@@ -638,12 +638,6 @@ end
         UI.panel.behavior.trialNumber = uicontrol('Parent',UI.panel.behavior.main,'Style', 'Edit', 'String', '', 'Units','normalized', 'Position', [0.01 0.01 0.485 0.20],'HorizontalAlignment','center','tooltip','Trial number','Callback',@gotoTrial);
         UI.panel.behavior.trialCount = uicontrol('Parent',UI.panel.behavior.main,'Style', 'Edit', 'String', 'nTrials', 'Units','normalized', 'Position', [0.505 0.01 0.485 0.20],'HorizontalAlignment','center','Enable','off');
         
-        % Cluster 
-        UI.panel.cluster.main = uipanel('Parent',UI.panel.other.main,'title','Clustering');
-        uicontrol('Parent',UI.panel.cluster.main,'Style', 'text', 'String', 'Algorithm', 'Units','normalized', 'Position', [0.01 0.70 0.4 0.24],'HorizontalAlignment','left','tooltip','Select algorithm to use');
-        UI.panel.cluster.algo = uicontrol('Parent',UI.panel.cluster.main,'Style', 'popup','String',{'Pablo''s','Deep Learning'}, 'value', UI.settings.cluster.algo, 'Units','normalized', 'Position', [0.41 0.86 0.58 0.12], 'HorizontalAlignment','left');
-        uicontrol('Parent',UI.panel.cluster.main,'Style','pushbutton','Units','normalized','Position',[0.34 0.02 0.32 0.48],'String','Calculate','Callback', @calculateCluster);
-
         % My Spectrogram
         UI.panel.my_spectrogram.main = uipanel('Parent',UI.panel.other.main,'title','My Spectrogram');
         UI.panel.my_spectrogram.showSpectrogram = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'checkbox','String','Show spectrogram', 'value', 0, 'Units','normalized', 'Position', [0.01 0.83 0.99 0.15],'Callback',@toggleMySpectrogram,'HorizontalAlignment','left');
@@ -657,9 +651,6 @@ end
         
         uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','Low freq (Hz)', 'Units','normalized', 'Position', [0.01 0.17 0.48 0.14],'HorizontalAlignment','left');
         UI.panel.my_spectrogram.freq_low = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrogram.freq_low), 'Units','normalized', 'Position', [0.01 0.01 0.48 0.17],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
-        
-        % uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','Step size (Hz)', 'Units','normalized', 'Position', [0.34 0.20 0.32 0.14],'HorizontalAlignment','center');
-        % UI.panel.my_spectrogram.freq_step_size = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrogram.freq_step_size), 'Units','normalized', 'Position', [0.34 0.20 0.32 0.19],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
         
         uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','High freq (Hz)', 'Units','normalized', 'Position', [0.51 0.17 0.48 0.14],'HorizontalAlignment','left');
         UI.panel.my_spectrogram.freq_high = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrogram.freq_high), 'Units','normalized', 'Position', [0.51 0.01 0.48 0.17],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
@@ -728,9 +719,9 @@ end
         UI.panel.audio.rightChannel = uicontrol('Parent',UI.panel.audio.main,'Style', 'Edit', 'String', num2str(UI.settings.audioChannels(2)), 'Units','normalized', 'Position', [0.505 0 0.485 0.36],'HorizontalAlignment','center','tooltip','Right channel','Callback',@togglePlayAudio);
                 
         % Defining flexible panel heights
-        set(UI.panel.other.main, 'Heights', [280 110 95 140 80 95 80 95 50 90 90 90],'MinimumHeights',[300 120 100 150 85 165 120 150 50 90 90 90]);
+        set(UI.panel.other.main, 'Heights', [280 110 95 140 95 80 95 50 90 90 90],'MinimumHeights',[300 120 100 150 165 120 150 50 90 90 90]);
         UI.panel.other.main1.MinimumWidths = 218;
-        UI.panel.other.main1.MinimumHeights = 1513;
+        UI.panel.other.main1.MinimumHeights = 1428;
         
         % % % % % % % % % % % % % % % % % % % % % %
         % Lower info panel elements
@@ -1399,6 +1390,22 @@ end
         for i = 1:data.session.timeSeries.(signal).nChannels
             addLegend(UI.settings.traceLabels.(signal){i},UI.colorLine(i,:)*0.8);
         end
+    end
+
+    function highlightClusterPoint(point_index)
+        if ~isempty(UI.cluster.highlighted)
+            delete(UI.cluster.highlighted);
+        end
+        
+        % Change the color of the target point to red        
+        target = UI.cluster.Y(point_index, :);
+        UI.cluster.highlighted = line(target(1), target(2),'Marker','.','LineStyle','none','color','r');
+        
+        UI.t0 = (UI.cluster.spectrogram.window_sample - UI.cluster.spectrogram.overlap) * (point_index - 1) / ephys.sr;                
+        UI.elements.lower.windowsSize.String = num2str(UI.cluster.spectrogram.window_time);
+        setWindowsSize;
+        % TODO: has to change places
+        % highlightTraces(UI.cluster.spectrogram.channels,'y');
     end
 
     function highlightTraces(channels,colorIn)
@@ -2669,6 +2676,25 @@ end
             web(['https://buzsakilab.com/wp/animals/?frm_search=', data.session.animal.name],'-new','-browser')
         else
             web('https://buzsakilab.com/wp/animals/','-new','-browser')
+        end
+    end
+
+    function keyPressCluster(~, event)
+        % Handles keyboard shortcuts
+        if isempty(event.Modifier)
+            switch event.Key
+                case 'rightarrow'
+                    % TODO: Hittest also getting this? Change to other axis?
+                    if isfield(UI,'cluster') && ~isempty(UI.cluster.highlighted)
+                        target_x=get(UI.cluster.highlighted,'Xdata');
+                        target_y=get(UI.cluster.highlighted,'Ydata');
+                        knn = knnsearch(UI.cluster.Y, [target_x, target_y], 'K', 10, 'IncludeTies', true);
+                        knn = knn{1};
+                        new_target = knn(randi(numel(knn)));
+
+                        highlightClusterPoint(new_target);
+                    end
+            end
         end
     end
 
@@ -4480,7 +4506,7 @@ end
                 file = UI.data.fileNameLFP;
             end
 
-            display("Loading New Channel");
+            display('Loading New Channel');
             ephys.full = LoadBinary(file, 'frequency', ephys.sr, 'channels', UI.settings.my_spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
         % TODO: check if free it or hold in memory
         % elseif UI.panel.my_spectrogram.fullSpectrogram.Value == 0 && ~isempty(ephys.full)
@@ -4586,7 +4612,7 @@ end
             end
 
             if ~isfield(UI,'plot_channel_spectrogram_axis')
-                % 'XMinorTick','on','XLim',[0,UI.settings.windowDuration],'YLim',[0,1],'YTickLabel',[],'Clipping','off' 'ButtonDownFcn',@ClickSpectrogram,
+                % 'XMinorTick','on','XLim',[0,UI.settings.windowDuration],'YLim',[0,1],'YTickLabel',[],'Clipping','off' 
                 % TODO: make variables for spectrogram size
                 UI.settings.channel_spectrogram.show = true;
                 UI.plot_channel_spectrogram_axis = axes('Position',[1 - UI.axis.size.channel_spectrogram UI.plot_axis1.Position(2) UI.axis.size.channel_spectrogram UI.plot_axis1.Position(4)], 'Parent',UI.panel.plots,'Units','Normalize','Color',UI.settings.background,'XColor',UI.settings.primaryColor, 'ButtonDownFcn',@ClickChannelSpectrogram);%,'TickLength',[0.005, 0.001], 'XLim',[0,UI.settings.windowDuration],'YLim',[0,1], 'Clipping','off');
@@ -4671,7 +4697,7 @@ end
             end
 
             if ~isfield(UI,'plot_spectrogram_axis')
-                % 'XMinorTick','on','XLim',[0,UI.settings.windowDuration],'YLim',[0,1],'YTickLabel',[],'Clipping','off' 'ButtonDownFcn',@ClickSpectrogram,
+                % 'XMinorTick','on','XLim',[0,UI.settings.windowDuration],'YLim',[0,1],'YTickLabel',[],'Clipping','off'
                 % TODO: make variables for spectrogram size
                 UI.plot_spectrogram_axis = axes('Position',[0 0 UI.plot_axis1.Position(3) UI.axis.size.my_spectrogram], 'Parent',UI.panel.plots,'Units','Normalize','Color',UI.settings.background,'XColor',UI.settings.primaryColor,'TickLength',[0.005, 0.001], 'XLim',[0,UI.settings.windowDuration],'YLim',[0,1], 'Clipping','off', 'ButtonDownFcn',@ClickSpectrogram);
                 UI.plot_axis1.Position = [UI.plot_axis1.Position(1) UI.plot_axis1.Position(2) + UI.axis.size.my_spectrogram UI.plot_axis1.Position(3) UI.plot_axis1.Position(4) - UI.axis.size.my_spectrogram];
@@ -4694,28 +4720,31 @@ end
         uiresume(UI.fig);
     end
 
-    function calculateCluster(~,~)   
-        set(UI.fig_cluster,'Name',append('Cluster: ', UI.panel.cluster.algo.String{UI.panel.cluster.algo.Value}));
+    function displayCluster
+        UI.cluster.highlighted = [];
+        
+        set(UI.fig_cluster,'Name', 'Cluster');
         set(UI.fig_cluster,'visible','on')
 
-        s1 = dir(UI.data.fileName);
-        s2 = dir(UI.data.fileNameLFP);
-        if ~isempty(s1)
-            file = UI.data.filename;
-        elseif ~isempty(s2)
-            file = UI.data.fileNameLFP;
-        end
-        X = tsne_pablo(file, ephys.sr, [1 2 3 4 5], data.session.extracellular.nChannels);
+        % TODO: put this before on creation of the rest
+        UI.plot_cluster_axis = axes('Parent', UI.fig_cluster,'Units','Normalize','Position',[0 0 1 1],'Clipping','off');
+        
+        % TODO: why here and not axis
+        % UI.cluster.plot = gscatter(UI.plot_cluster_axis,UI.cluster.Y(:, 1), UI.cluster.Y(:, 2));
+        % TODO: for now emulating gscatter later, change ce_gscatter?
+        % TODO: color as const
+        UI.cluster.plot = line(UI.plot_cluster_axis,UI.cluster.Y(:, 1), UI.cluster.Y(:, 2),'Marker','.','LineStyle','none','color','blue');
+        
+        % UI.cluster.plot = ce_gscatter(plotX1(UI.params.subset), plotY1(UI.params.subset), UI.classes.plot(UI.params.subset), UI.classes.colors,UI.preferences.markerSize,'.');
+        % TODO: debug this and see if add others as array. maybe put all active axis under an array
+        limit_x = [min(UI.cluster.Y(:,1)), max(UI.cluster.Y(:,1))];
+        offset_x = (limit_x(2) - limit_x(1)) * 0.015;
+        limit_y = [min(UI.cluster.Y(:,2)), max(UI.cluster.Y(:,2))];
+        offset_y = (limit_y(2) - limit_y(1)) * 0.015;
+        set(UI.plot_cluster_axis, 'XLim', [limit_x(1) - offset_x, limit_x(2) + offset_x], 'YLim', [limit_y(1) - offset_y, limit_y(2) + offset_y]);
+        ce_dragzoom(UI.plot_cluster_axis,'on');
 
-        % disp(size(y)); 45065   390 ---- 7929 * __ * 63 (channel size)
-        % disp(size(f)); 390     1
-        % disp(size(t)); 45065   1   ---- 7929 * 1
-
-        % Thoughts:
-        % t-SNE should go from N(samples)xD(dimensions aka number of chosen channels) to Nx2
-        % To backtrack the indices of both are the same
-        % Problem: I'll obtain a slice of spectrogram normalized across X channels due to the powerMean pre-processing
-
+        set(UI.cluster.plot, 'ButtonDownFcn',@ClickCluster);
     end
 
     function setSortingMetric(~,~)
@@ -4791,7 +4820,7 @@ end
                 UI.params.alteredCellMetrics = 0;
             end
             
-            [newStr2,matches] = split(UI.panel.cell_metrics.textFilter.String,[" & "," | "," OR "," AND "]);
+            [newStr2,matches] = split(UI.panel.cell_metrics.textFilter.String,[' & ',' | ',' OR ',' AND ']);
             idx_textFilter2 = zeros(length(newStr2),data.cell_metrics.general.cellCount);
             failCheck = 0;
             for i = 1:length(newStr2)
@@ -5511,7 +5540,21 @@ end
         switch get(UI.fig, 'selectiontype')
             case 'normal' % left mouse button
                 % t0
+                % TODO: fix this -> window size is not the same, mapping is not entirely correct
                 UI.t0 = t0_normalized * UI.t_total;
+                uiresume(UI.fig);
+            otherwise
+        end
+    end
+
+    function ClickCluster(src,event)
+        switch get(UI.fig_cluster, 'selectiontype')
+            case 'normal' % left mouse button
+                % TODO: Change this 
+                k = dsearchn(UI.cluster.Y,event.IntersectionPoint(1:2));
+
+                highlightClusterPoint(k);
+
                 uiresume(UI.fig);
             otherwise
         end
@@ -6772,6 +6815,9 @@ end
                 out = analysis_tools.behavior.(function1)('ephys',ephys,'UI',UI,'data',data);
             case 'cell_metrics'
                 out = analysis_tools.cell_metrics.(function1)('ephys',ephys,'UI',UI,'data',data);
+            case 'cluster'
+                UI.cluster = analysis_tools.cluster.(function1)('ephys',ephys,'UI',UI,'data',data);
+                displayCluster;
             case 'events'
                 out = analysis_tools.events.(function1)('ephys',ephys,'UI',UI,'data',data);
             case 'lfp'

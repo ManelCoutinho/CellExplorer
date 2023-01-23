@@ -1,0 +1,383 @@
+function out = tsne_umap(varargin)
+% This function is called from NeuroScope2 via the menu Analysis 
+
+p = inputParser;
+
+% The inputs are NeuroScope2 variables:
+addParameter(p,'ephys',[],@isstruct); % ephys: Struct with ephys data for current shown time interval, e.g. ephys.raw (raw unprocessed data), ephys.traces (processed data)
+addParameter(p,'UI',[],@isstruct); % UI: struct with UI elements and settings of NeuroScope2
+addParameter(p,'data',[],@isstruct); % data: contains all external data loaded like data.session, data.spikes, data.events, data.states, data.behavior
+parse(p,varargin{:})
+
+ephys = p.Results.ephys;
+UI = p.Results.UI;
+
+out = {};
+
+% % % % % % % % % % % % % % % %
+% Function content below
+% % % % % % % % % % % % % % % % 
+
+% Default preferences
+% tSNE representation
+preferences = {};
+preferences.algorithm = 'tSNE';
+% TODO: add exact vs barneshut option
+preferences.dDistanceMetric = 'chebychev';
+preferences.exaggeration = 10;
+preferences.standardize = false;
+preferences.NumPCAComponents = 0;
+preferences.LearnRate = 1000;
+preferences.Perplexity = 30;
+preferences.InitialY = 'Random';
+
+% UMAP
+preferences.n_neighbors = 30;
+preferences.min_dist = 0.3;
+
+tSNE_metrics = {};
+
+
+ce_waitbar = [];
+
+% Dropdown fields
+algorithms = {'tSNE','UMAP','PCA'};
+InitialYMetrics = {'Random','PCA space'};
+distanceMetrics = {'euclidean', 'seuclidean', 'cityblock', 'chebychev', 'minkowski', 'mahalanobis', 'cosine', 'correlation', 'spearman', 'hamming', 'jaccard'};
+spectrogram = {};
+spectrogram.window_time = 2;
+spectrogram.window_sample = 2^floor(log2(spectrogram.window_time * ephys.sr));
+spectrogram.freq_low = 1;
+spectrogram.freq_high = 100;
+spectrogram.overlap_perc = 80;
+spectrogram.overlap = round(spectrogram.window_sample * spectrogram.overlap_perc / 100);
+spectrogram.nw = 2;
+channels = [UI.channels{:}];
+
+% [list_tSNE_metrics,ia] = generateMetricsList(cell_metrics,'all',preferences.metrics);
+
+% [indx,tf] = listdlg('PromptString',['Select the metrics to use for the tSNE plot'],'ListString',list_tSNE_metrics,'SelectionMode','multiple','ListSize',[350,400],'InitialValue',1:length(ia));
+
+load_tSNE.dialog = dialog('Position', [300, 300, 500, 518],'Name','Select metrics for dimensionality reduction','WindowStyle','modal','visible','off'); movegui(load_tSNE.dialog,'center'), set(load_tSNE.dialog,'visible','on')
+load_tSNE.channelList = uicontrol('Parent',load_tSNE.dialog,'Style','listbox','String', channels,'Position',[10, 135, 190, 372],'Value',1:5,'Max',length(channels),'Min',1);
+
+% Spectrogram Menu
+uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[210, 481, 270, 20],'Units','normalized','String','________________________________','HorizontalAlignment','left');
+uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[210, 487, 270, 20],'Units','normalized','String','Spectrogram Settings','HorizontalAlignment','left');
+
+uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[210, 456, 180, 20],'Units','normalized','String','Window width (sec)','HorizontalAlignment','left');
+load_tSNE.spectrogram.window_time = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 456, 60, 20],'Units','normalized','String', num2str(spectrogram.window_time),'HorizontalAlignment','center','Callback',@updateWindow);
+
+uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[210, 434, 180, 20],'Units','normalized','String','Window width (#samples)','HorizontalAlignment','left');
+load_tSNE.spectrogram.window_sample = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 434, 60, 20],'Units','normalized','String', num2str(spectrogram.window_sample),'HorizontalAlignment','center','Enable','off');
+
+uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[210, 412, 180, 20],'Units','normalized','String','Low frequency (Hz)','HorizontalAlignment','left');
+load_tSNE.spectrogram.freq_low = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 412, 60, 20],'Units','normalized','String', num2str(spectrogram.freq_low),'HorizontalAlignment','center');
+
+uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[210, 390, 180, 20],'Units','normalized','String','High frequency (Hz)','HorizontalAlignment','left');
+load_tSNE.spectrogram.high_high = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 390, 60, 20],'Units','normalized','String', num2str(spectrogram.freq_high),'HorizontalAlignment','center');
+
+uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[210, 368, 180, 20],'Units','normalized','String','Overlap (%)','HorizontalAlignment','left');
+load_tSNE.spectrogram.overlap_perc = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 368, 60, 20],'Units','normalized','String', num2str(spectrogram.overlap_perc),'HorizontalAlignment','center','Callback',@updateOverlap);
+
+uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[210, 346, 180, 20],'Units','normalized','String','Overlap (#samples)','HorizontalAlignment','left');
+load_tSNE.spectrogram.overlap = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 346, 60, 20],'Units','normalized','String',num2str(spectrogram.overlap),'HorizontalAlignment','center','Enable','off');
+
+uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[210, 324, 180, 20],'Units','normalized','String','Time Bandwidth','HorizontalAlignment','left');
+load_tSNE.spectrogram.nw = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 324, 60, 20],'Units','normalized','String', num2str(spectrogram.nw),'HorizontalAlignment','center');
+
+load_tSNE.spectrogram.whitening = uicontrol('Parent',load_tSNE.dialog,'Style','checkbox','Position',[210, 302, 260, 20],'Units','normalized','String','Whiten Channels before Spectrogram','Value', 1,'HorizontalAlignment','right');
+
+uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[10, 113, 100, 20],'Units','normalized','String','Algorithm','HorizontalAlignment','left');
+load_tSNE.popupmenu.algorithm = uicontrol('Parent',load_tSNE.dialog,'Style','popupmenu','Position',[10, 95, 100, 20],'Units','normalized','String',algorithms,'HorizontalAlignment','left','Callback',@(src,evnt)setAlgorithm);
+if isfield(preferences,'algorithm') && find(strcmp(preferences.algorithm,algorithms))
+    load_tSNE.popupmenu.algorithm.Value = find(strcmp(preferences.algorithm,algorithms));
+else
+    load_tSNE.popupmenu.algorithm.Value = 1;
+end
+        
+uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[120, 113, 110, 20],'Units','normalized','String','Distance metric','HorizontalAlignment','left');
+load_tSNE.popupmenu.distanceMetric = uicontrol('Parent',load_tSNE.dialog,'Style','popupmenu','Position',[120, 95, 120, 20],'Units','normalized','String',distanceMetrics,'HorizontalAlignment','left');
+% TODO: remove
+
+
+%     tSNE_preferences.InitialY = 'Random';
+load_tSNE.label.NumPCAComponents = uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[10, 73, 100, 20],'Units','normalized','String','nPCAComponents','HorizontalAlignment','left');
+load_tSNE.popupmenu.NumPCAComponents = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[10, 55, 100, 20],'Units','normalized','String',preferences.NumPCAComponents,'HorizontalAlignment','left');
+
+load_tSNE.label.LearnRate = uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[120, 73, 90, 20],'Units','normalized','String','LearnRate','HorizontalAlignment','left');
+load_tSNE.popupmenu.LearnRate = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[120, 55, 90, 20],'Units','normalized','String',preferences.LearnRate,'HorizontalAlignment','left');
+
+load_tSNE.label.Perplexity = uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[220, 73, 70, 20],'Units','normalized','String','Perplexity','HorizontalAlignment','left');
+load_tSNE.popupmenu.Perplexity = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[220, 55, 70, 20],'Units','normalized','String',preferences.Perplexity,'HorizontalAlignment','left');
+
+
+load_tSNE.label.InitialY = uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[380, 73, 110, 20],'Units','normalized','String','InitialY','HorizontalAlignment','left');
+load_tSNE.popupmenu.InitialY = uicontrol('Parent',load_tSNE.dialog,'Style','popupmenu','Position',[380, 55, 110, 20],'Units','normalized','String',InitialYMetrics,'HorizontalAlignment','left','Value',1);
+if find(strcmp(preferences.InitialY,InitialYMetrics)); load_tSNE.popupmenu.InitialY.Value = find(strcmp(preferences.InitialY,InitialYMetrics)); end
+
+load_tSNE.label.exaggeration = uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[300, 73, 70, 20],'Units','normalized','String','Exaggeration','HorizontalAlignment','left');
+load_tSNE.popupmenu.exaggeration = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[300, 55, 70, 20],'Units','normalized','String',num2str(preferences.exaggeration),'HorizontalAlignment','left');
+
+% UMAP Fields
+load_tSNE.label.n_neighbors = uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[10, 73, 100, 20],'Units','normalized','String','n_neighbors','HorizontalAlignment','left');
+load_tSNE.popupmenu.n_neighbors = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[10, 55, 100, 20],'Units','normalized','String',preferences.n_neighbors,'HorizontalAlignment','left');
+
+load_tSNE.label.min_dist = uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[120, 73, 90, 20],'Units','normalized','String','min_dist','HorizontalAlignment','left');
+load_tSNE.popupmenu.min_dist = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[120, 55, 90, 20],'Units','normalized','String',preferences.min_dist,'HorizontalAlignment','left');
+
+uicontrol('Parent',load_tSNE.dialog,'Style','pushbutton','Position',[300, 10, 90, 30],'String','OK','Callback',@(src,evnt)close_tSNE_dialog);
+uicontrol('Parent',load_tSNE.dialog,'Style','pushbutton','Position',[400, 10, 90, 30],'String','Cancel','Callback',@(src,evnt)cancel_tSNE_dialog);
+setAlgorithm
+uiwait(load_tSNE.dialog)
+
+    function setAlgorithm
+        if load_tSNE.popupmenu.algorithm.Value == 1
+            distanceMetrics = {'euclidean', 'seuclidean', 'cityblock', 'chebychev', 'minkowski', 'mahalanobis', 'cosine', 'correlation', 'spearman', 'hamming', 'jaccard'};
+            load_tSNE.popupmenu.distanceMetric.String = distanceMetrics;
+            if find(strcmp(preferences.dDistanceMetric,distanceMetrics))
+                load_tSNE.popupmenu.distanceMetric.Value = find(strcmp(preferences.dDistanceMetric,distanceMetrics)); 
+            else
+                load_tSNE.popupmenu.distanceMetric.Value = 1;
+            end
+            load_tSNE.popupmenu.distanceMetric.Enable = 'on';
+            % t-SNE Fields
+            load_tSNE.popupmenu.NumPCAComponents.Visible = 'on';
+            load_tSNE.popupmenu.LearnRate.Visible = 'on';
+            load_tSNE.popupmenu.Perplexity.Visible = 'on';
+            load_tSNE.popupmenu.exaggeration.Visible = 'on';
+            load_tSNE.popupmenu.InitialY.Visible = 'on';
+            % t-SNE Labels
+            load_tSNE.label.NumPCAComponents.Visible = 'on';
+            load_tSNE.label.LearnRate.Visible = 'on';
+            load_tSNE.label.Perplexity.Visible = 'on';
+            load_tSNE.label.exaggeration.Visible = 'on';
+            load_tSNE.label.InitialY.Visible = 'on';
+            
+            % UMAP
+            load_tSNE.popupmenu.n_neighbors.Visible = 'off';
+            load_tSNE.popupmenu.min_dist.Visible = 'off';
+            load_tSNE.label.n_neighbors.Visible = 'off';
+            load_tSNE.label.min_dist.Visible = 'off';
+            
+        elseif load_tSNE.popupmenu.algorithm.Value == 2
+            distanceMetrics = {'euclidean', 'cosine', 'cityblock', 'seuclidean', 'squaredeuclidean', 'correlation', 'jaccard', 'spearman', 'hamming'};
+            load_tSNE.popupmenu.distanceMetric.String = distanceMetrics;
+            if find(strcmp(preferences.dDistanceMetric,distanceMetrics))
+                load_tSNE.popupmenu.distanceMetric.Value = find(strcmp(preferences.dDistanceMetric,distanceMetrics)); 
+            else
+                load_tSNE.popupmenu.distanceMetric.Value = 1;
+            end
+            load_tSNE.popupmenu.distanceMetric.Enable = 'on';
+            % t-SNE Fields
+            load_tSNE.popupmenu.NumPCAComponents.Visible = 'off';
+            load_tSNE.popupmenu.LearnRate.Visible = 'off';
+            load_tSNE.popupmenu.Perplexity.Visible = 'off';
+            load_tSNE.popupmenu.exaggeration.Visible = 'off';
+            load_tSNE.popupmenu.InitialY.Visible = 'off';
+            % t-SNE Labels
+            load_tSNE.label.NumPCAComponents.Visible = 'off';
+            load_tSNE.label.LearnRate.Visible = 'off';
+            load_tSNE.label.Perplexity.Visible = 'off';
+            load_tSNE.label.exaggeration.Visible = 'off';
+            load_tSNE.label.InitialY.Visible = 'off';
+            
+            % UMAP
+            load_tSNE.popupmenu.n_neighbors.Visible = 'on';
+            load_tSNE.popupmenu.min_dist.Visible = 'on';
+            load_tSNE.label.n_neighbors.Visible = 'on';
+            load_tSNE.label.min_dist.Visible = 'on';
+        else
+            load_tSNE.popupmenu.distanceMetric.Enable = 'off';
+            % t-SNE Fields
+            load_tSNE.popupmenu.NumPCAComponents.Visible = 'off';
+            load_tSNE.popupmenu.LearnRate.Visible = 'off';
+            load_tSNE.popupmenu.Perplexity.Visible = 'off';
+            load_tSNE.popupmenu.exaggeration.Visible = 'off';
+            load_tSNE.popupmenu.InitialY.Visible = 'off';
+            % t-SNE Labels
+            load_tSNE.label.NumPCAComponents.Visible = 'off';
+            load_tSNE.label.LearnRate.Visible = 'off';
+            load_tSNE.label.Perplexity.Visible = 'off';
+            load_tSNE.label.exaggeration.Visible = 'off';
+            load_tSNE.label.InitialY.Visible = 'off';
+            
+            % UMAP
+            load_tSNE.popupmenu.n_neighbors.Visible = 'off';
+            load_tSNE.popupmenu.min_dist.Visible = 'off';
+            load_tSNE.label.n_neighbors.Visible = 'off';
+            load_tSNE.label.min_dist.Visible = 'off';
+        end
+    end
+
+    function close_tSNE_dialog
+        s1 = dir(UI.data.fileName);
+        s2 = dir(UI.data.fileNameLFP);
+        if ~isempty(s1)
+            file = UI.data.filename;
+        elseif ~isempty(s2)
+            file = UI.data.fileNameLFP;
+        end
+        
+        spectrogram.channels = load_tSNE.channelList.Value;
+        
+        % TODO: error verification (?)
+        preferences.dDistanceMetric = load_tSNE.popupmenu.distanceMetric.String{load_tSNE.popupmenu.distanceMetric.Value};
+        preferences.exaggeration = str2double(load_tSNE.popupmenu.exaggeration.String);
+        preferences.algorithm = load_tSNE.popupmenu.algorithm.String{load_tSNE.popupmenu.algorithm.Value};
+        
+        preferences.NumPCAComponents = str2double(load_tSNE.popupmenu.NumPCAComponents.String);
+        preferences.LearnRate = str2double(load_tSNE.popupmenu.LearnRate.String);
+        preferences.Perplexity = str2double(load_tSNE.popupmenu.Perplexity.String);
+        preferences.InitialY = load_tSNE.popupmenu.InitialY.String{load_tSNE.popupmenu.InitialY.Value};
+        
+        preferences.n_neighbors = str2double(load_tSNE.popupmenu.n_neighbors.String);
+        preferences.min_dist = str2double(load_tSNE.popupmenu.min_dist.String);
+        
+        whitening = load_tSNE.spectrogram.whitening.Value;
+        delete(load_tSNE.dialog);
+        ce_waitbar = waitbar(0,'Preparing metrics for tSNE space...');
+
+        waitbar(0.1,ce_waitbar,'Loading Channels...');
+	    % data = LoadBinary(file, 'frequency', ephys.sr, 'channels', spectrogram.channels, 'nChannels', length(channels));
+
+        % if whitening == 1
+        %     waitbar(0.2,ce_waitbar,'Whitening Channels...');
+        %     % TODO: selectable Whitening Parameters
+        %     data = WhitenSignal(data, ephys.sr * 2000, 1);
+        % end
+        
+        % waitbar(0.3,ce_waitbar,'Calculating Spectrogram...');
+        
+        % % TODO: show nFFT as well? 
+        % % TODO: verify and update nw, freqs
+        % [y, f, ~] = mtcsglong(data, 2 * spectrogram.window_sample, ephys.sr, spectrogram.window_sample, spectrogram.overlap, spectrogram.nw, 'linear', [], [spectrogram.freq_low spectrogram.freq_high]);
+        % clear data
+
+        % waitbar(0.4,ce_waitbar,'Mean, Smoothing and Normalizing...');
+        % % TODO: add this options?
+        % PowerSignal = PowerMean(y,f, 1:length(y(1,1,:)),spectrogram.freq_low, spectrogram.freq_high);
+        % clear y
+        % clear f
+
+        % WindowType = 'Gauss';
+        % Plotting = false;
+        % WinLength=21; %number of samples
+        % % TODO: why does the number of channels increase?
+        % Smoothed = PowerSmoothing(PowerSignal,WindowType,WinLength,Plotting);
+        % X = rescale(Smoothed)';
+        % disp(size(X));
+        % % TODO: decent saving program
+        % save('tsne/norm.mat','X');
+        % clear PowerSignal
+        % clear Smoothed
+
+        var = load('tsne/norm.mat');
+        % TODO: for now
+	    X = var.X(:, 1:1000)';
+        opts = statset('OutputFcn',@updateBar, 'MaxIter', 205);
+        
+        switch preferences.algorithm
+            case 'tSNE'
+                if strcmp(preferences.InitialY,'PCA space')
+                    waitbar(0.45,ce_waitbar,'Calculating PCA init space...')
+                    initPCA = pca(X,'NumComponents',2);
+                    waitbar(0.5,ce_waitbar,'Calculating tSNE space...')
+                    out.Y = tsne(X,'Standardize',preferences.standardize,'Distance',preferences.dDistanceMetric,'Exaggeration',preferences.exaggeration,'NumPCAComponents',preferences.NumPCAComponents,'Perplexity',preferences.Perplexity,'InitialY',initPCA,'LearnRate',preferences.LearnRate,'NumPrint',100,'Options',opts);
+                else
+                    waitbar(0.5,ce_waitbar,'Calculating tSNE space...')
+                    out.Y = tsne(X,'Standardize',preferences.standardize,'Distance',preferences.dDistanceMetric,'Exaggeration',preferences.exaggeration,'NumPCAComponents',min(size(X,1),preferences.NumPCAComponents),'Perplexity',min(size(X,2),preferences.Perplexity),'LearnRate',preferences.LearnRate,'NumPrint',100,'Options',opts);
+                end
+                
+            case 'UMAP'
+                waitbar(0.5,ce_waitbar,'Calculating UMAP space...')
+                out.Y = run_umap(X,'verbose','none','metric',preferences.dDistanceMetric,'n_neighbors',preferences.n_neighbors,'min_dist',preferences.min_dist); %
+            case 'PCA'
+                waitbar(0.5,ce_waitbar,'Calculating PCA space...')
+                out.Y = pca(X,'NumComponents',2); % ,'metric',tSNE_preferences.dDistanceMetric
+        end
+        
+        out.spectrogram = spectrogram;
+
+        if ishandle(ce_waitbar)
+            close(ce_waitbar)
+        end
+    end
+
+    function  cancel_tSNE_dialog
+        % Closes the dialog
+        delete(load_tSNE.dialog);
+        return
+    end
+
+    function updateWindow(~,~)
+        window_time = str2num(load_tSNE.spectrogram.window_time.String);
+        if ~isempty(window_time) && isnumeric(window_time) && (window_time > 0) 
+            spectrogram.window_time = window_time;
+            spectrogram.window_sample = 2^floor(log2(spectrogram.window_time * ephys.sr));
+            load_tSNE.spectrogram.window_sample.String = num2str(spectrogram.window_sample);
+            updateOverlap;
+        else
+            % TODO: test this
+            MsgLog('The spectrogram window width is not valid',4);
+            return
+        end
+    end
+
+    function updateOverlap(~,~)
+        overlap_perc = str2num(load_tSNE.spectrogram.overlap_perc.String);
+        if ~isempty(overlap_perc) && isnumeric(overlap_perc) && (overlap_perc >= 0) && (overlap_perc <= 100)
+            spectrogram.overlap_perc = overlap_perc;
+            spectrogram.overlap = round(spectrogram.window_sample * spectrogram.overlap_perc / 100);
+            load_tSNE.spectrogram.overlap.String = num2str(spectrogram.overlap);
+        else
+            MsgLog('The overlap percentage is not valid',4);
+            return
+        end
+    end
+
+    function stop = updateBar(optimValues,state)
+        stop = false;
+        switch state
+            case 'init'
+                % Set up plots or open files
+            case 'iter'
+                % Draw plots or update variables
+                % 1000 = MaxIteration
+                waitbar(0.5 + optimValues.iteration / (1000 / 0.5),ce_waitbar,'Calculating tSNE space...');
+            case 'done'
+                % Clean up plots or files
+        end
+    end
+
+    % TODO: in the future, updatable display
+    % function stop = updateBar(optimValues,state)
+    %     persistent h stopnow
+    %     switch state
+    %         case 'init'
+    %             stopnow = false;
+    %             h = figure;
+    %             c = uicontrol('Style','pushbutton','String','Stop','Position', ...
+    %                 [10 10 50 20],'Callback',@stopme);
+    %             wait_children = get(ce_waitbar,'Children'); 
+    %             set(wait_children,'Parent',h);  % Set the position of the WAITBAR on your figure 
+    %            % set(wait_children,'Units','Normalized','Position',[10 70 30 100]);  
+    %         case 'iter'
+                
+
+    %             waitbar(0.5 + optimValues.iteration / (1000 / 0.5),h);
+
+    %             figure(h)
+    %             gscatter(optimValues.Y(:,1),optimValues.Y(:,2))
+    %             title('Embedding')
+    %             drawnow
+    %         case 'done'
+    %             % Nothing here
+    %     end
+    %     stop = stopnow;
+        
+    %     function stopme(~,~)
+    %     stopnow = true;
+    %     end
+    %     end
+end
