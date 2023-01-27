@@ -307,6 +307,7 @@ end
 
         % Cluster figure
         UI.fig_cluster = figure('Name','Cluster','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter', 'none', 'DefaultLegendInterpreter', 'none', 'MenuBar', 'None', 'KeyPressFcn', @keyPressCluster);
+        UI.plot_cluster_axis = axes('Parent', UI.fig_cluster,'Units','Normalize','Position',[0 0 1 1],'Clipping','off');
         
         % % % % % % % % % % % % % % % % % % % % % %
         % Creating menu
@@ -1179,6 +1180,12 @@ end
                 end
             end
         end
+
+        % Highlight Channels if Cluster calculated
+        % TODO: remove when window closed:
+        if isfield(UI,'cluster')
+            highlightTraces(UI.cluster.spectrogram.channels,'y');
+        end
         
         if UI.settings.stickySelection && ~isempty(UI.selectedChannels)
             for i = 1:length(UI.selectedChannels)
@@ -1397,15 +1404,13 @@ end
             delete(UI.cluster.highlighted);
         end
         
-        % Change the color of the target point to red        
+        % Change the color of the target point to red
         target = UI.cluster.Y(point_index, :);
-        UI.cluster.highlighted = line(target(1), target(2),'Marker','.','LineStyle','none','color','r');
+        UI.cluster.highlighted = line(UI.plot_cluster_axis, target(1), target(2),'Marker','o','LineStyle','none','color','r', 'DisplayName', 'Highlighted');
         
         UI.t0 = (UI.cluster.spectrogram.window_sample - UI.cluster.spectrogram.overlap) * (point_index - 1) / ephys.sr;                
         UI.elements.lower.windowsSize.String = num2str(UI.cluster.spectrogram.window_time);
         setWindowsSize;
-        % TODO: has to change places
-        % highlightTraces(UI.cluster.spectrogram.channels,'y');
     end
 
     function highlightTraces(channels,colorIn)
@@ -2685,7 +2690,7 @@ end
             switch event.Key
                 case 'rightarrow'
                     % TODO: Hittest also getting this? Change to other axis?
-                    if isfield(UI,'cluster') && ~isempty(UI.cluster.highlighted)
+                    if isfield(UI,'cluster')
                         target_x=get(UI.cluster.highlighted,'Xdata');
                         target_y=get(UI.cluster.highlighted,'Ydata');
                         knn = knnsearch(UI.cluster.Y, [target_x, target_y], 'K', 10, 'IncludeTies', true);
@@ -4722,19 +4727,14 @@ end
 
     function displayCluster
         UI.cluster.highlighted = [];
-        
-        set(UI.fig_cluster,'Name', 'Cluster');
-        set(UI.fig_cluster,'visible','on')
 
-        % TODO: put this before on creation of the rest
-        UI.plot_cluster_axis = axes('Parent', UI.fig_cluster,'Units','Normalize','Position',[0 0 1 1],'Clipping','off');
-        
         % TODO: why here and not axis
         % UI.cluster.plot = gscatter(UI.plot_cluster_axis,UI.cluster.Y(:, 1), UI.cluster.Y(:, 2));
         % TODO: for now emulating gscatter later, change ce_gscatter?
-        % TODO: color as const
-        UI.cluster.plot = line(UI.plot_cluster_axis,UI.cluster.Y(:, 1), UI.cluster.Y(:, 2),'Marker','.','LineStyle','none','color','blue');
-        
+        % TODO: color as constcla(UI.plot_cluster_axis);
+        cla(UI.plot_cluster_axis);
+        UI.cluster.plot = gscatter(UI.plot_cluster_axis, UI.cluster.Y(:, 1), UI.cluster.Y(:, 2), UI.cluster.labels);
+
         % UI.cluster.plot = ce_gscatter(plotX1(UI.params.subset), plotY1(UI.params.subset), UI.classes.plot(UI.params.subset), UI.classes.colors,UI.preferences.markerSize,'.');
         % TODO: debug this and see if add others as array. maybe put all active axis under an array
         limit_x = [min(UI.cluster.Y(:,1)), max(UI.cluster.Y(:,1))];
@@ -4742,6 +4742,7 @@ end
         limit_y = [min(UI.cluster.Y(:,2)), max(UI.cluster.Y(:,2))];
         offset_y = (limit_y(2) - limit_y(1)) * 0.015;
         set(UI.plot_cluster_axis, 'XLim', [limit_x(1) - offset_x, limit_x(2) + offset_x], 'YLim', [limit_y(1) - offset_y, limit_y(2) + offset_y]);
+        
         ce_dragzoom(UI.plot_cluster_axis,'on');
 
         set(UI.cluster.plot, 'ButtonDownFcn',@ClickCluster);
@@ -5339,18 +5340,20 @@ end
             filesize = s1.bytes;
             UI.t_total = filesize/(data.session.extracellular.nChannels*data.session.extracellular.sr*2);
 
-            ephys.full = LoadBinary(UI.data.fileName, 'frequency', data.session.extracellular.sr, 'channels', spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
-            % TODO: decide parameters
-            [~, spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.sr * 2000, 1);
+            % TODO: for now
+            % ephys.full = LoadBinary(UI.data.fileName, 'frequency', data.session.extracellular.sr, 'channels', spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
+            % % TODO: decide parameters
+            % [~, spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.sr * 2000, 1);
         elseif ~isempty(s2)
             filesize = s2.bytes;
             UI.t_total = filesize/(data.session.extracellular.nChannels*data.session.extracellular.srLfp*2);
             UI.settings.plotStyle = 4;
             UI.panel.general.plotStyle.Value = UI.settings.plotStyle;
 
-            ephys.full = LoadBinary(UI.data.fileNameLFP, 'frequency', data.session.extracellular.srLfp, 'channels', spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
-            % TODO: decide parameters
-            [~, spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.srLfp * 2000, 1);
+            % TODO: for now
+            % ephys.full = LoadBinary(UI.data.fileNameLFP, 'frequency', data.session.extracellular.srLfp, 'channels', spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
+            % % TODO: decide parameters
+            % [~, spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.srLfp * 2000, 1);
         else
             warning('NeuroScope2: Binary data does not exist')
         end

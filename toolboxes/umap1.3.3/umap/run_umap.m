@@ -257,7 +257,7 @@ function [reduction, umap, clusterIdentifiers]=run_umap(varargin)
 
 clusterIdentifiers=[];
 initJava;
-addpath('../util');
+% addpath('../util');
 reduction=[];
 umap=[];
 p=parseArguments();

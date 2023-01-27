@@ -239,44 +239,53 @@ uiwait(load_tSNE.dialog)
         ce_waitbar = waitbar(0,'Preparing metrics for tSNE space...');
 
         waitbar(0.1,ce_waitbar,'Loading Channels...');
-	    % data = LoadBinary(file, 'frequency', ephys.sr, 'channels', spectrogram.channels, 'nChannels', length(channels));
+	    data = LoadBinary(file, 'frequency', ephys.sr, 'channels', spectrogram.channels, 'nChannels', length(channels));
 
-        % if whitening == 1
-        %     waitbar(0.2,ce_waitbar,'Whitening Channels...');
-        %     % TODO: selectable Whitening Parameters
-        %     data = WhitenSignal(data, ephys.sr * 2000, 1);
-        % end
+        if whitening == 1
+            waitbar(0.2,ce_waitbar,'Whitening Channels...');
+            % TODO: selectable Whitening Parameters
+            data = WhitenSignal(data, ephys.sr * 2000, 1);
+        end
         
-        % waitbar(0.3,ce_waitbar,'Calculating Spectrogram...');
+        waitbar(0.3,ce_waitbar,'Calculating Spectrogram...');
         
         % % TODO: show nFFT as well? 
         % % TODO: verify and update nw, freqs
-        % [y, f, ~] = mtcsglong(data, 2 * spectrogram.window_sample, ephys.sr, spectrogram.window_sample, spectrogram.overlap, spectrogram.nw, 'linear', [], [spectrogram.freq_low spectrogram.freq_high]);
-        % clear data
+        [y, f, t] = mtcsglong(data, 2 * spectrogram.window_sample, ephys.sr, spectrogram.window_sample, spectrogram.overlap, spectrogram.nw, 'linear', [], [spectrogram.freq_low spectrogram.freq_high]);
+        clear data
 
-        % waitbar(0.4,ce_waitbar,'Mean, Smoothing and Normalizing...');
-        % % TODO: add this options?
-        % PowerSignal = PowerMean(y,f, 1:length(y(1,1,:)),spectrogram.freq_low, spectrogram.freq_high);
-        % clear y
-        % clear f
+        waitbar(0.4,ce_waitbar,'Mean, Smoothing and Normalizing...');
+        % TODO: add this options?
+        % var=load('tsne/spect.mat');
+        % y = var.y;
+        % f = var.f;
+        % t = var.t;
 
-        % WindowType = 'Gauss';
-        % Plotting = false;
-        % WinLength=21; %number of samples
-        % % TODO: why does the number of channels increase?
-        % Smoothed = PowerSmoothing(PowerSignal,WindowType,WinLength,Plotting);
-        % X = rescale(Smoothed)';
+        out.labels = LabelSamples(fullfile(UI.data.basepath, UI.data.basename), {'REM', 'RUN', 'SWS'}, ephys.sr, t);
+        PowerSignal = PowerMean(y,f, 1:length(y(1,1,:)),spectrogram.freq_low, spectrogram.freq_high);
+        clear y
+        clear f
+        clear t
+
+        WindowType = 'Gauss';
+        Plotting = false;
+        WinLength=21; %number of samples
+        % TODO: why does the number of channels increase?
+        Smoothed = PowerSmoothing(PowerSignal,WindowType,WinLength,Plotting);
+        X = rescale(Smoothed)';
         % disp(size(X));
-        % % TODO: decent saving program
-        % save('tsne/norm.mat','X');
-        % clear PowerSignal
-        % clear Smoothed
-
-        var = load('tsne/norm.mat');
-        % TODO: for now
-	    X = var.X(:, 1:1000)';
-        opts = statset('OutputFcn',@updateBar, 'MaxIter', 205);
+        % TODO: decent saving program
+        save('tsne/norm.mat','X');
+        clear PowerSignal
+        clear Smoothed
         
+        % var = load('tsne/norm.mat');
+        % TODO: for now
+	    % X = var.X(:, 1:1000)';
+        % out.labels = out.labels(1:1000);
+        % opts = statset('OutputFcn',@updateBar, 'MaxIter', 505);
+        opts = statset('OutputFcn',@updateBar);
+
         switch preferences.algorithm
             case 'tSNE'
                 if strcmp(preferences.InitialY,'PCA space')
@@ -291,6 +300,7 @@ uiwait(load_tSNE.dialog)
                 
             case 'UMAP'
                 waitbar(0.5,ce_waitbar,'Calculating UMAP space...')
+                % TODO: progress_callback
                 out.Y = run_umap(X,'verbose','none','metric',preferences.dDistanceMetric,'n_neighbors',preferences.n_neighbors,'min_dist',preferences.min_dist); %
             case 'PCA'
                 waitbar(0.5,ce_waitbar,'Calculating PCA space...')
@@ -337,47 +347,30 @@ uiwait(load_tSNE.dialog)
     end
 
     function stop = updateBar(optimValues,state)
-        stop = false;
+        persistent stopnow
         switch state
             case 'init'
-                % Set up plots or open files
+                stopnow = false;
+                set(UI.fig_cluster,'visible','on');
             case 'iter'
-                % Draw plots or update variables
-                % 1000 = MaxIteration
                 waitbar(0.5 + optimValues.iteration / (1000 / 0.5),ce_waitbar,'Calculating tSNE space...');
+                cla(UI.plot_cluster_axis);
+
+                UI.cluster.plot = gscatter(UI.plot_cluster_axis, optimValues.Y(:, 1), optimValues.Y(:, 2), out.labels);
+
+                limit_x = [min(optimValues.Y(:,1)), max(optimValues.Y(:,1))];
+                offset_x = (limit_x(2) - limit_x(1)) * 0.015;
+                limit_y = [min(optimValues.Y(:,2)), max(optimValues.Y(:,2))];
+                offset_y = (limit_y(2) - limit_y(1)) * 0.015;
+                %% TODO: maybe already being done by default
+                set(UI.plot_cluster_axis, 'XLim', [limit_x(1) - offset_x, limit_x(2) + offset_x], 'YLim', [limit_y(1) - offset_y, limit_y(2) + offset_y]);                
             case 'done'
-                % Clean up plots or files
+                % Nothing here
+        end
+        stop = stopnow;
+        
+        function stopme(~,~)
+            stopnow = true;
         end
     end
-
-    % TODO: in the future, updatable display
-    % function stop = updateBar(optimValues,state)
-    %     persistent h stopnow
-    %     switch state
-    %         case 'init'
-    %             stopnow = false;
-    %             h = figure;
-    %             c = uicontrol('Style','pushbutton','String','Stop','Position', ...
-    %                 [10 10 50 20],'Callback',@stopme);
-    %             wait_children = get(ce_waitbar,'Children'); 
-    %             set(wait_children,'Parent',h);  % Set the position of the WAITBAR on your figure 
-    %            % set(wait_children,'Units','Normalized','Position',[10 70 30 100]);  
-    %         case 'iter'
-                
-
-    %             waitbar(0.5 + optimValues.iteration / (1000 / 0.5),h);
-
-    %             figure(h)
-    %             gscatter(optimValues.Y(:,1),optimValues.Y(:,2))
-    %             title('Embedding')
-    %             drawnow
-    %         case 'done'
-    %             % Nothing here
-    %     end
-    %     stop = stopnow;
-        
-    %     function stopme(~,~)
-    %     stopnow = true;
-    %     end
-    %     end
 end
