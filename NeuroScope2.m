@@ -73,6 +73,7 @@ else
     p = inputParser;
     addParameter(p,'basepath',pwd,@ischar);
     addParameter(p,'basename',[],@ischar);
+    addParameter(p,'lfp',true,@islogical);
     addParameter(p,'session',[],@isstruct);
     addParameter(p,'spikes',[],@ischar);
     addParameter(p,'events',[],@ischar);
@@ -85,6 +86,9 @@ else
     parameters = p.Results;
     basepath = p.Results.basepath;
     basename = p.Results.basename;
+    if parameters.lfp
+        UI.priority = 'lfp';
+    end
     if isempty(basename)
         basename = basenameFromBasepath(basepath);
     end
