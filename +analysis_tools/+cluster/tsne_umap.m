@@ -22,7 +22,6 @@ out = {};
 % tSNE representation
 preferences = {};
 preferences.algorithm = 'tSNE';
-% TODO: add exact vs barneshut option
 preferences.dDistanceMetric = 'chebychev';
 preferences.exaggeration = 10;
 preferences.standardize = false;
@@ -98,8 +97,6 @@ end
         
 uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[120, 113, 110, 20],'Units','normalized','String','Distance metric','HorizontalAlignment','left');
 load_tSNE.popupmenu.distanceMetric = uicontrol('Parent',load_tSNE.dialog,'Style','popupmenu','Position',[120, 95, 120, 20],'Units','normalized','String',distanceMetrics,'HorizontalAlignment','left');
-% TODO: remove
-
 
 %     tSNE_preferences.InitialY = 'Random';
 load_tSNE.label.NumPCAComponents = uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[10, 73, 100, 20],'Units','normalized','String','nPCAComponents','HorizontalAlignment','left');
@@ -220,6 +217,7 @@ uiwait(load_tSNE.dialog)
         end
         
         spectrogram.channels = load_tSNE.channelList.Value;
+        spectrogram.nFFT = 2 * spectrogram.window_sample;
         
         % TODO: error verification (?)
         preferences.dDistanceMetric = load_tSNE.popupmenu.distanceMetric.String{load_tSNE.popupmenu.distanceMetric.Value};
@@ -238,31 +236,47 @@ uiwait(load_tSNE.dialog)
         delete(load_tSNE.dialog);
         ce_waitbar = waitbar(0,'Preparing metrics for tSNE space...');
 
-        waitbar(0.1,ce_waitbar,'Loading Channels...');
-	    data = LoadBinary(file, 'frequency', ephys.sr, 'channels', spectrogram.channels, 'nChannels', length(channels));
+        spect_name = Manager.get_spectrogram_name(UI.data.basename, spectrogram.nFFT, spectrogram.window_sample, spectrogram.overlap_perc, spectrogram.freq_low, spectrogram.freq_high, spectrogram.nw, whitening);
 
-        if whitening == 1
-            waitbar(0.2,ce_waitbar,'Whitening Channels...');
-            % TODO: selectable Whitening Parameters
-            data = WhitenSignal(data, ephys.sr * 2000, 1);
+        data = Manager.load('spect', spect_name, spectrogram.channels);
+        if ~isempty(fieldnames(data))
+            new_channels = find(all(data.y==0, 3));
+        else
+            new_channels = spectrogram.channels;
+        end
+        if ~isempty(new_channels)
+            waitbar(0,ce_waitbar,'Loading Channels...');
+            data = LoadBinary(file, 'frequency', ephys.sr, 'channels', new_channels, 'nChannels', length(channels));
+    
+            if whitening == 1
+                waitbar(0.1,ce_waitbar,'Whitening Channels...');
+                % TODO: selectable Whitening Parameters, maybe save ARModel to be consistent per file?
+                data = WhitenSignal(data, ephys.sr * 2000, 1);
+            end
+
+            waitbar(0.2,ce_waitbar,'Calculating Spectrogram...');
+            % TODO: show nFFT as well? 
+            % TODO: verify and update nw, freqs
+            [y, f, t] = mtcsglong(data, spectrogram.nFFT, ephys.sr, spectrogram.window_sample, spectrogram.overlap, spectrogram.nw, 'linear', [], [spectrogram.freq_low spectrogram.freq_high]);
+            
+            Manager.save(struct('t',t, 'f',f, 'y',y), 'spect', spect_name, length(channels), new_channels);      
+        else
+            y = data.y;
+            f = data.f;
+            t = data.t;
+            clear data
         end
         
-        waitbar(0.3,ce_waitbar,'Calculating Spectrogram...');
+        waitbar(0.3,ce_waitbar,'Labeling samples...');
+        out.labels = LabelSamples(fullfile(UI.data.basepath, UI.data.basename), {'REM', 'RUN', 'SWS'}, ephys.sr, t);
         
-        % % TODO: show nFFT as well? 
-        % % TODO: verify and update nw, freqs
-        [y, f, t] = mtcsglong(data, 2 * spectrogram.window_sample, ephys.sr, spectrogram.window_sample, spectrogram.overlap, spectrogram.nw, 'linear', [], [spectrogram.freq_low spectrogram.freq_high]);
-        clear data
+        %%%%%%%%%%%%%%
+        % Processing %
+        %%%%%%%%%%%%%%
 
         waitbar(0.4,ce_waitbar,'Mean, Smoothing and Normalizing...');
         % TODO: add this options?
-        % var=load('tsne/spect.mat');
-        % y = var.y;
-        % f = var.f;
-        % t = var.t;
-
-        out.labels = LabelSamples(fullfile(UI.data.basepath, UI.data.basename), {'REM', 'RUN', 'SWS'}, ephys.sr, t);
-        PowerSignal = PowerMean(y,f, 1:length(y(1,1,:)),spectrogram.freq_low, spectrogram.freq_high);
+        X = PowerMean(y,f, 1:length(y(1,1,:)),spectrogram.freq_low, spectrogram.freq_high);
         clear y
         clear f
         clear t
@@ -270,21 +284,15 @@ uiwait(load_tSNE.dialog)
         WindowType = 'Gauss';
         Plotting = false;
         WinLength=21; %number of samples
-        % TODO: why does the number of channels increase?
-        Smoothed = PowerSmoothing(PowerSignal,WindowType,WinLength,Plotting);
-        X = rescale(Smoothed)';
-        % disp(size(X));
-        % TODO: decent saving program
-        save('tsne/norm.mat','X');
-        clear PowerSignal
-        clear Smoothed
-        
-        % var = load('tsne/norm.mat');
+        % TODO: why does the number of channels increase? - due to Filter0
+        X = PowerSmoothing(X,WindowType,WinLength,Plotting);
+        X = rescale(X)';
+
         % TODO: for now
-	    % X = var.X(:, 1:1000)';
-        % out.labels = out.labels(1:1000);
-        % opts = statset('OutputFcn',@updateBar, 'MaxIter', 505);
-        opts = statset('OutputFcn',@updateBar);
+	    X = var.X(:, 1:1000)';
+        out.labels = out.labels(1:1000);
+        opts = statset('OutputFcn',@updateBar, 'MaxIter', 505);
+        % opts = statset('OutputFcn',@updateBar);
 
         switch preferences.algorithm
             case 'tSNE'
@@ -314,7 +322,7 @@ uiwait(load_tSNE.dialog)
         end
     end
 
-    function  cancel_tSNE_dialog
+    function cancel_tSNE_dialog
         % Closes the dialog
         delete(load_tSNE.dialog);
         return
