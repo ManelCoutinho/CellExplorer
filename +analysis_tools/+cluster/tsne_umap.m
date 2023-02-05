@@ -11,12 +11,25 @@ parse(p,varargin{:})
 
 ephys = p.Results.ephys;
 UI = p.Results.UI;
+data = p.Results.data;
 
 out = {};
 
 % % % % % % % % % % % % % % % %
 % Function content below
 % % % % % % % % % % % % % % % % 
+
+% Initialize States - with selected states data
+if exist(fullfile(UI.data.basepath,[UI.data.basename,'.',UI.settings.statesData,'.states.mat']),'file')
+    if ~isfield(data,'states') || ~isfield(data.states,UI.settings.statesData)
+        data.states.(UI.settings.statesData) = loadStruct(UI.settings.statesData,'states','session',data.session);
+    end
+    if isfield(data.states.(UI.settings.statesData),'ints')
+        states  = data.states.(UI.settings.statesData).ints;
+    else
+        states  = data.states.(UI.settings.statesData);
+    end
+end
 
 % Default preferences
 % tSNE representation
@@ -33,9 +46,6 @@ preferences.InitialY = 'Random';
 % UMAP
 preferences.n_neighbors = 30;
 preferences.min_dist = 0.3;
-
-tSNE_metrics = {};
-
 
 ce_waitbar = [];
 
@@ -234,12 +244,30 @@ uiwait(load_tSNE.dialog)
         
         whitening = load_tSNE.spectrogram.whitening.Value;
         delete(load_tSNE.dialog);
-        ce_waitbar = waitbar(0,'Preparing metrics for tSNE space...');
 
         spect_name = Manager.get_spectrogram_name(UI.data.basename, spectrogram.nFFT, spectrogram.window_sample, spectrogram.overlap_perc, spectrogram.freq_low, spectrogram.freq_high, spectrogram.nw, whitening);
+        switch preferences.algorithm
+            case 'tSNE'
+                algo_name = Manager.get_tsne_name(spect_name, spectrogram.channels, preferences.dDistanceMetric, preferences.LearnRate, preferences.Perplexity, preferences.exaggeration, preferences.NumPCAComponents, strcmp(preferences.InitialY,'PCA space'));                
+            case 'UMAP'
+                algo_name = Manager.get_umap_name(spect_name, spectrogram.channels, preferences.dDistanceMetric, preferences.n_neighbors, preferences.min_dist);
+            case 'PCA'
+                algo_name = Manager.get_pca_name(spect_name, spectrogram.channels);
+        end
+        algo_res = Manager.load(preferences.algorithm, algo_name);
+        if ~isempty(algo_res)
+            out.Y = algo_res;
+            out.spectrogram = spectrogram;
+            % TODO: out.labels
+            % out.labels = LabelSamples(fullfile(UI.data.basepath, UI.data.basename), {'REM', 'RUN', 'SWS'}, ephys.sr, t);
+            return
+        end
+
+        ce_waitbar = waitbar(0,'Preparing metrics for tSNE space...');
+
 
         data = Manager.load('spect', spect_name, spectrogram.channels);
-        if ~isempty(fieldnames(data))
+        if ~isempty(data)
             new_channels_idx = find(all(data.y==0, [1, 2]));
             new_channels = spectrogram.channels(new_channels_idx);
         else
@@ -273,15 +301,17 @@ uiwait(load_tSNE.dialog)
         clear new_data
         clear data
         
-        waitbar(0.3,ce_waitbar,'Labeling samples...');
-        out.labels = LabelSamples(fullfile(UI.data.basepath, UI.data.basename), {'REM', 'RUN', 'SWS'}, ephys.sr, t);
-        
+        %% TODO: do smt if no states file present
+        if exist('states', 'var') && ~isempty(states)
+            waitbar(0.3,ce_waitbar,'Labeling samples...');
+            out.labels = LabelSamples(states, t);
+        end
         %%%%%%%%%%%%%%
         % Processing %
         %%%%%%%%%%%%%%
 
         waitbar(0.4,ce_waitbar,'Mean, Smoothing and Normalizing...');
-        % TODO: add this options?
+        % TODO: add this as options?
         X = PowerMean(y,f, 1:length(y(1,1,:)),spectrogram.freq_low, spectrogram.freq_high);
         clear y
         clear f
@@ -290,26 +320,33 @@ uiwait(load_tSNE.dialog)
         WindowType = 'Gauss';
         Plotting = false;
         WinLength=21; %number of samples
-        % TODO: why does the number of channels increase? - due to Filter0
+        % why does the number of channels increase? - due to Filter0
         X = PowerSmoothing(X,WindowType,WinLength,Plotting);
         X = rescale(X)';
 
         % TODO: for now
-	    X = var.X(:, 1:1000)';
+	    X = X(1:1000,:);
         out.labels = out.labels(1:1000);
         opts = statset('OutputFcn',@updateBar, 'MaxIter', 505);
         % opts = statset('OutputFcn',@updateBar);
-
+        
         switch preferences.algorithm
             case 'tSNE'
                 if strcmp(preferences.InitialY,'PCA space')
-                    waitbar(0.45,ce_waitbar,'Calculating PCA init space...')
-                    initPCA = pca(X,'NumComponents',2);
+                    
+                    pca_name = Manager.get_pca_name(spect_name, spectrogram.channels);
+                    initPCA = Manager.load('PCA', pca_name);
+                    if isempty(initPCA)
+                        waitbar(0.45,ce_waitbar,'Calculating PCA init space...')
+                        initPCA = pca(X,'NumComponents',2);
+                        Manager.save(initPCA, 'PCA', pca_name);
+                    end
+                    
                     waitbar(0.5,ce_waitbar,'Calculating tSNE space...')
                     out.Y = tsne(X,'Standardize',preferences.standardize,'Distance',preferences.dDistanceMetric,'Exaggeration',preferences.exaggeration,'NumPCAComponents',preferences.NumPCAComponents,'Perplexity',preferences.Perplexity,'InitialY',initPCA,'LearnRate',preferences.LearnRate,'NumPrint',100,'Options',opts);
                 else
                     waitbar(0.5,ce_waitbar,'Calculating tSNE space...')
-                    out.Y = tsne(X,'Standardize',preferences.standardize,'Distance',preferences.dDistanceMetric,'Exaggeration',preferences.exaggeration,'NumPCAComponents',min(size(X,1),preferences.NumPCAComponents),'Perplexity',min(size(X,2),preferences.Perplexity),'LearnRate',preferences.LearnRate,'NumPrint',100,'Options',opts);
+                    out.Y = tsne(X,'Standardize',preferences.standardize,'Distance',preferences.dDistanceMetric,'Exaggeration',preferences.exaggeration,'NumPCAComponents',min(size(X,1),preferences.NumPCAComponents),'Perplexity',min(size(X,2),preferences.Perplexity),'LearnRate',preferences.LearnRate,'NumPrint',100,'Options',opts);                    
                 end
                 
             case 'UMAP'
@@ -320,6 +357,7 @@ uiwait(load_tSNE.dialog)
                 waitbar(0.5,ce_waitbar,'Calculating PCA space...')
                 out.Y = pca(X,'NumComponents',2); % ,'metric',tSNE_preferences.dDistanceMetric
         end
+        Manager.save(out.Y, preferences.algorithm, algo_name);
         
         out.spectrogram = spectrogram;
 
@@ -335,7 +373,7 @@ uiwait(load_tSNE.dialog)
     end
 
     function updateWindow(~,~)
-        window_time = str2num(load_tSNE.spectrogram.window_time.String);
+        window_time = str2double(load_tSNE.spectrogram.window_time.String);
         if ~isempty(window_time) && isnumeric(window_time) && (window_time > 0) 
             spectrogram.window_time = window_time;
             spectrogram.window_sample = 2^floor(log2(spectrogram.window_time * ephys.sr));
@@ -349,7 +387,7 @@ uiwait(load_tSNE.dialog)
     end
 
     function updateOverlap(~,~)
-        overlap_perc = str2num(load_tSNE.spectrogram.overlap_perc.String);
+        overlap_perc = str2double(load_tSNE.spectrogram.overlap_perc.String);
         if ~isempty(overlap_perc) && isnumeric(overlap_perc) && (overlap_perc >= 0) && (overlap_perc <= 100)
             spectrogram.overlap_perc = overlap_perc;
             spectrogram.overlap = round(spectrogram.window_sample * spectrogram.overlap_perc / 100);
@@ -365,7 +403,8 @@ uiwait(load_tSNE.dialog)
         switch state
             case 'init'
                 stopnow = false;
-                set(UI.fig_cluster,'visible','on');
+                set(UI.fig_cluster,'visible','on'); 
+                %uicontrol('Style','pushbutton','String','Stop','Position', [10 10 50 20],'Callback',@stopme);
             case 'iter'
                 waitbar(0.5 + optimValues.iteration / (1000 / 0.5),ce_waitbar,'Calculating tSNE space...');
                 cla(UI.plot_cluster_axis);
@@ -383,8 +422,8 @@ uiwait(load_tSNE.dialog)
         end
         stop = stopnow;
         
-        function stopme(~,~)
-            stopnow = true;
-        end
+        %function stopme(~,~)
+        %    stopnow = true;
+        %end
     end
 end

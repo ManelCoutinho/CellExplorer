@@ -4509,7 +4509,7 @@ end
         if UI.panel.my_spectrogram.fullSpectrogram.Value == 1 %isempty(ephys.full)
             s1 = dir(UI.data.fileName);
             s2 = dir(UI.data.fileNameLFP);
-            if ~isempty(s1)
+            if ~isempty(s1) && ~strcmp(UI.priority,'lfp')
                 file = UI.data.filename;
             elseif ~isempty(s2)
                 file = UI.data.fileNameLFP;
@@ -5462,7 +5462,7 @@ end
         UI.settings.stream = false;
         s1 = dir(UI.data.fileName);
         s2 = dir(UI.data.fileNameLFP);
-        if ~isempty(s1)
+        if ~isempty(s1) && ~strcmp(UI.priority,'lfp')
             filesize = s1.bytes;
             UI.t_total = filesize/(data.session.extracellular.nChannels*data.session.extracellular.sr*2);
         elseif ~isempty(s2)
