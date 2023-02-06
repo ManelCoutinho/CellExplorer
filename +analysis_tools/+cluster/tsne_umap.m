@@ -81,10 +81,10 @@ uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[210, 434, 180, 20
 load_tSNE.spectrogram.window_sample = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 434, 60, 20],'Units','normalized','String', num2str(spectrogram.window_sample),'HorizontalAlignment','center','Enable','off');
 
 uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[210, 412, 180, 20],'Units','normalized','String','Low frequency (Hz)','HorizontalAlignment','left');
-load_tSNE.spectrogram.freq_low = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 412, 60, 20],'Units','normalized','String', num2str(spectrogram.freq_low),'HorizontalAlignment','center');
+load_tSNE.spectrogram.freq_low = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 412, 60, 20],'Units','normalized','String', num2str(spectrogram.freq_low),'HorizontalAlignment','center','Callback',@updateVariable);
 
 uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[210, 390, 180, 20],'Units','normalized','String','High frequency (Hz)','HorizontalAlignment','left');
-load_tSNE.spectrogram.high_high = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 390, 60, 20],'Units','normalized','String', num2str(spectrogram.freq_high),'HorizontalAlignment','center');
+load_tSNE.spectrogram.freq_high = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 390, 60, 20],'Units','normalized','String', num2str(spectrogram.freq_high),'HorizontalAlignment','center','Callback',@updateVariable);
 
 uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[210, 368, 180, 20],'Units','normalized','String','Overlap (%)','HorizontalAlignment','left');
 load_tSNE.spectrogram.overlap_perc = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 368, 60, 20],'Units','normalized','String', num2str(spectrogram.overlap_perc),'HorizontalAlignment','center','Callback',@updateOverlap);
@@ -93,7 +93,7 @@ uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[210, 346, 180, 20
 load_tSNE.spectrogram.overlap = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 346, 60, 20],'Units','normalized','String',num2str(spectrogram.overlap),'HorizontalAlignment','center','Enable','off');
 
 uicontrol('Parent',load_tSNE.dialog,'Style','text','Position',[210, 324, 180, 20],'Units','normalized','String','Time Bandwidth','HorizontalAlignment','left');
-load_tSNE.spectrogram.nw = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 324, 60, 20],'Units','normalized','String', num2str(spectrogram.nw),'HorizontalAlignment','center');
+load_tSNE.spectrogram.nw = uicontrol('Parent',load_tSNE.dialog,'Style','Edit','Position',[420, 324, 60, 20],'Units','normalized','String', num2str(spectrogram.nw),'HorizontalAlignment','center','Callback',@updateVariable);
 
 load_tSNE.spectrogram.whitening = uicontrol('Parent',load_tSNE.dialog,'Style','checkbox','Position',[210, 302, 260, 20],'Units','normalized','String','Whiten Channels before Spectrogram','Value', 1,'HorizontalAlignment','right');
 
@@ -254,18 +254,31 @@ uiwait(load_tSNE.dialog)
             case 'PCA'
                 algo_name = Manager.get_pca_name(spect_name, spectrogram.channels);
         end
+
+        ce_waitbar = waitbar(0,'Preparing metrics for tSNE space...');
+
         algo_res = Manager.load(preferences.algorithm, algo_name);
         if ~isempty(algo_res)
             out.Y = algo_res;
             out.spectrogram = spectrogram;
-            % TODO: out.labels
-            % out.labels = LabelSamples(fullfile(UI.data.basepath, UI.data.basename), {'REM', 'RUN', 'SWS'}, ephys.sr, t);
+
+            % Calculating t to add out.labels
+            winstep = spectrogram.window_sample - spectrogram.overlap;
+            t = winstep*(0:(size(out.Y,1)-1))'/ephys.sr;
+            waitbar(0.5,ce_waitbar,'Labeling samples...');
+            if exist('states', 'var') && ~isempty(states)
+                out.labels = LabelSamples(states, t);
+            else
+                out.labels = LabelSamples(struct(), t);
+            end 
+            if ishandle(ce_waitbar)
+                close(ce_waitbar)
+            end
             return
         end
 
-        ce_waitbar = waitbar(0,'Preparing metrics for tSNE space...');
 
-
+        % TODO optimize loading (are freq just subsetting?)
         data = Manager.load('spect', spect_name, spectrogram.channels);
         if ~isempty(data)
             new_channels_idx = find(all(data.y==0, [1, 2]));
@@ -284,8 +297,7 @@ uiwait(load_tSNE.dialog)
             end
 
             waitbar(0.2,ce_waitbar,'Calculating Spectrogram...');
-            % TODO: show nFFT as well? 
-            % TODO: verify and update nw, freqs
+
             [y, f, t] = mtcsglong(new_data, spectrogram.nFFT, ephys.sr, spectrogram.window_sample, spectrogram.overlap, spectrogram.nw, 'linear', [], [spectrogram.freq_low spectrogram.freq_high]);           
             Manager.save(struct('t',t, 'f',f, 'y',y), 'spect', spect_name, length(channels), new_channels);
             
@@ -300,11 +312,12 @@ uiwait(load_tSNE.dialog)
         end
         clear new_data
         clear data
-        
-        %% TODO: do smt if no states file present
+                
+        waitbar(0.3,ce_waitbar,'Labeling samples...');
         if exist('states', 'var') && ~isempty(states)
-            waitbar(0.3,ce_waitbar,'Labeling samples...');
             out.labels = LabelSamples(states, t);
+        else
+            out.labels = LabelSamples(struct(), t);
         end
         %%%%%%%%%%%%%%
         % Processing %
@@ -325,10 +338,10 @@ uiwait(load_tSNE.dialog)
         X = rescale(X)';
 
         % TODO: for now
-	    X = X(1:1000,:);
-        out.labels = out.labels(1:1000);
-        opts = statset('OutputFcn',@updateBar, 'MaxIter', 505);
-        % opts = statset('OutputFcn',@updateBar);
+	    % X = X(1:1000,:);
+        % out.labels = out.labels(1:1000);
+        % opts = statset('OutputFcn',@updateBar, 'MaxIter', 505);
+        opts = statset('OutputFcn',@updateBar);
         
         switch preferences.algorithm
             case 'tSNE'
@@ -372,6 +385,31 @@ uiwait(load_tSNE.dialog)
         return
     end
 
+    function updateVariable(src,~)
+        numeric_gt_0 = @(n) ~isempty(n) && isnumeric(n) && (n > 0); % numeric and greater than 0
+        numeric_gte_0 = @(n) ~isempty(n) && isnumeric(n) && (n >= 0); % Numeric and greater than or equal to 0
+
+        freq_low = str2double(load_tSNE.spectrogram.freq_low.String);
+        freq_high = str2double(load_tSNE.spectrogram.freq_high.String);
+
+        if numeric_gte_0(freq_low) && numeric_gt_0(freq_high) && freq_high > freq_low
+            spectrogram.freq_low = freq_low;
+            spectrogram.freq_high = freq_high;
+        else
+            load_tSNE.spectrogram.freq_low.String = num2str(spectrogram.freq_low);
+            load_tSNE.spectrogram.freq_high.String = num2str(spectrogram.freq_high);
+            warndlg('The spectrogram frequency range is not valid','NeuroScope2');
+        end
+
+        nw = str2double(load_tSNE.spectrogram.nw.String);
+        if numeric_gt_0(nw)
+            spectrogram.nw = nw;
+        else
+            load_tSNE.spectrogram.nw.String = num2str(spectrogram.nw);
+            warndlg('The spectrogram time bandwidth is not valid','NeuroScope2');
+        end
+    end
+
     function updateWindow(~,~)
         window_time = str2double(load_tSNE.spectrogram.window_time.String);
         if ~isempty(window_time) && isnumeric(window_time) && (window_time > 0) 
@@ -380,9 +418,8 @@ uiwait(load_tSNE.dialog)
             load_tSNE.spectrogram.window_sample.String = num2str(spectrogram.window_sample);
             updateOverlap;
         else
-            % TODO: test this
-            MsgLog('The spectrogram window width is not valid',4);
-            return
+            load_tSNE.spectrogram.window_time.String = num2str(spectrogram.window_time);
+            warndlg('The spectrogram window width is not valid','NeuroScope2');
         end
     end
 
@@ -393,8 +430,8 @@ uiwait(load_tSNE.dialog)
             spectrogram.overlap = round(spectrogram.window_sample * spectrogram.overlap_perc / 100);
             load_tSNE.spectrogram.overlap.String = num2str(spectrogram.overlap);
         else
-            MsgLog('The overlap percentage is not valid',4);
-            return
+            load_tSNE.spectrogram.overlap_perc.String = num2str(spectrogram.overlap_perc);
+            warndlg('The overlap percentage is not valid','NeuroScope2');
         end
     end
 
@@ -415,7 +452,6 @@ uiwait(load_tSNE.dialog)
                 offset_x = (limit_x(2) - limit_x(1)) * 0.015;
                 limit_y = [min(optimValues.Y(:,2)), max(optimValues.Y(:,2))];
                 offset_y = (limit_y(2) - limit_y(1)) * 0.015;
-                %% TODO: maybe already being done by default
                 set(UI.plot_cluster_axis, 'XLim', [limit_x(1) - offset_x, limit_x(2) + offset_x], 'YLim', [limit_y(1) - offset_y, limit_y(2) + offset_y]);                
             case 'done'
                 % Nothing here

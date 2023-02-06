@@ -311,8 +311,9 @@ end
 
         % Cluster figure
         UI.fig_cluster = figure('Name','Cluster','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter', 'none', 'DefaultLegendInterpreter', 'none', 'MenuBar', 'None', 'KeyPressFcn', @keyPressCluster);
+        set(UI.fig_cluster,'CloseRequestFcn','set(get(0,''CurrentFigure''),''visible'',''off'')');
         UI.plot_cluster_axis = axes('Parent', UI.fig_cluster,'Units','Normalize','Position',[0 0 1 1],'Clipping','off');
-        
+
         % % % % % % % % % % % % % % % % % % % % % %
         % Creating menu
         
@@ -2297,21 +2298,20 @@ end
                     ephys.wfull = WhitenSignal(ephys.full, [], [], spectrogram.ARmodel);
                     spectrogram.recalculateWhiten = false;
                 end
-                SpecWindow = 2^round(log2(1 * ephys.sr));
                 wx = ephys.wfull;
             else % Not decoupled
                 % TODO: without parameters?
                 % wx = WhitenSignal(ephys.traces(:,UI.settings.my_spectrogram.channel), ephys.sr * 2000, 1, spectrogram.ARmodel);
                 wx = WhitenSignal(ephys.traces(:,UI.settings.my_spectrogram.channel), [], [], spectrogram.ARmodel);
-                SpecWindow = round(ephys.sr*UI.settings.my_spectrogram.window);
                 % SpecWindow = 2^round(log2(UI.settings.my_spectrogram.window * sr)); % choose window length as power of two
             end
-            
+            % TODO: enable my_spectrogram window > window duration for
+            % decouple
+            SpecWindow = 2^floor(log2(UI.settings.my_spectrogram.window * ephys.sr));
             nFFT = SpecWindow * 2;
-            display(SpecWindow);
-            display(nFFT);
             % max(256,2p), where p = ⌈log2 Nw⌉, the
-            noverlap = [];% round(sr*UI.settings.my_spectrogram.window*0.95);
+            % TODO: add as parameter?
+            noverlap = [];%round(SpecWindow*0.9);
             TimeBand = 2;
             % TODO: see step
             % FreqRange = freq_range; % TODO: can't be like that. format [[1 3], [3 5], ...]
@@ -4510,7 +4510,7 @@ end
             s1 = dir(UI.data.fileName);
             s2 = dir(UI.data.fileNameLFP);
             if ~isempty(s1) && ~strcmp(UI.priority,'lfp')
-                file = UI.data.filename;
+                file = UI.data.fileName;
             elseif ~isempty(s2)
                 file = UI.data.fileNameLFP;
             end
@@ -4730,6 +4730,7 @@ end
     end
 
     function displayCluster
+        set(UI.fig_cluster,'visible','on'); 
         UI.cluster.highlighted = [];
 
         % TODO: why here and not axis
@@ -5345,9 +5346,9 @@ end
             UI.t_total = filesize/(data.session.extracellular.nChannels*data.session.extracellular.sr*2);
 
             % TODO: for now
-            % ephys.full = LoadBinary(UI.data.fileName, 'frequency', data.session.extracellular.sr, 'channels', spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
+            ephys.full = LoadBinary(UI.data.fileName, 'frequency', data.session.extracellular.sr, 'channels', spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
             % % TODO: decide parameters
-            % [~, spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.sr * 2000, 1);
+            [~, spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.sr * 2000, 1);
         elseif ~isempty(s2)
             filesize = s2.bytes;
             UI.t_total = filesize/(data.session.extracellular.nChannels*data.session.extracellular.srLfp*2);
@@ -5355,9 +5356,9 @@ end
             UI.panel.general.plotStyle.Value = UI.settings.plotStyle;
 
             % TODO: for now
-            % ephys.full = LoadBinary(UI.data.fileNameLFP, 'frequency', data.session.extracellular.srLfp, 'channels', spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
+            ephys.full = LoadBinary(UI.data.fileNameLFP, 'frequency', data.session.extracellular.srLfp, 'channels', spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
             % % TODO: decide parameters
-            % [~, spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.srLfp * 2000, 1);
+            [~, spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.srLfp * 2000, 1);
         else
             warning('NeuroScope2: Binary data does not exist')
         end
@@ -6824,7 +6825,9 @@ end
                 out = analysis_tools.cell_metrics.(function1)('ephys',ephys,'UI',UI,'data',data);
             case 'cluster'
                 UI.cluster = analysis_tools.cluster.(function1)('ephys',ephys,'UI',UI,'data',data);
-                displayCluster;
+                if ~isempty(UI.cluster)
+                    displayCluster;
+                end
             case 'events'
                 out = analysis_tools.events.(function1)('ephys',ephys,'UI',UI,'data',data);
             case 'lfp'
@@ -7523,6 +7526,7 @@ end
         end
     end
 
+    % TODO: refactor and use it in tsne_umap
     function MsgLog(message,priority)
         % Writes the input message to the message log with a timestamp. The second parameter
         % defines the priority i.e. if any  message or warning should be given as well.
