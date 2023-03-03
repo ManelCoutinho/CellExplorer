@@ -5156,10 +5156,10 @@ end
         UI.ephys_offset = offset;
         if UI.settings.plotStyle == 4
             UI.channelScaling = ones(ceil(UI.settings.windowDuration*data.session.extracellular.srLfp),1)*UI.channelOffset;
-            UI.samplesToDisplay = UI.settings.windowDuration*data.session.extracellular.srLfp;
+            UI.samplesToDisplay = floor(UI.settings.windowDuration*data.session.extracellular.srLfp);
         else
             UI.channelScaling = ones(ceil(UI.settings.windowDuration*data.session.extracellular.sr),1)*UI.channelOffset;
-            UI.samplesToDisplay = UI.settings.windowDuration*data.session.extracellular.sr;
+            UI.samplesToDisplay = floor(UI.settings.windowDuration*data.session.extracellular.sr);
         end
 
         UI.dispSamples = floor(linspace(1,UI.samplesToDisplay,UI.Pix_SS));
@@ -5549,6 +5549,7 @@ end
             case 'normal' % left mouse button
                 % t0
                 % TODO: fix this -> window size is not the same, mapping is not entirely correct
+                % UI.t0 = (UI.cluster.spectrogram.window_sample - UI.cluster.spectrogram.overlap) * (point_index - 1) / ephys.sr;  
                 UI.t0 = t0_normalized * UI.t_total;
                 uiresume(UI.fig);
             otherwise
@@ -6828,6 +6829,8 @@ end
                 if ~isempty(UI.cluster)
                     displayCluster;
                 end
+            case 'ecog'
+                out = analysis_tools.ecog.(function1)('ephys',ephys,'UI',UI,'data',data);
             case 'events'
                 out = analysis_tools.events.(function1)('ephys',ephys,'UI',UI,'data',data);
             case 'lfp'
