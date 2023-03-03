@@ -3210,7 +3210,11 @@ end
             while UI.settings.stream
                 streamTic = tic;
                 UI.t0 = UI.t0+UI.settings.replayRefreshInterval*UI.settings.windowDuration;
-                UI.t0 = max([0,min([UI.t0,UI.t_total-UI.settings.windowDuration])]);
+                if UI.t0 >= UI.t_total-UI.settings.windowDuration
+                    UI.t0 = max([0, UI.t_total-UI.settings.windowDuration]);
+                    UI.settings.stream = false;
+                end
+
                 if ~ishandle(UI.fig)
                     return
                 end
@@ -3239,11 +3243,24 @@ end
                     highlightTraces(UI.settings.audioChannels,UI.settings.primaryColor);
                 end
 
+                
+                % Updating epoch axes
+                if ishandle(epoch_plotElements.t0)
+                    delete(epoch_plotElements.t0)
+                end
+                epoch_plotElements.t0 = line(UI.epochAxes,[UI.t0,UI.t0],[0,1],'color','k', 'HitTest','off','linewidth',1);
+
                 % Updating UI text and slider
                 UI.elements.lower.time.String = num2str(UI.t0);
                 setTimeText(UI.t0)
                 UI.streamingText = text(UI.plot_axis1,UI.settings.windowDuration/2,1,'Streaming','FontWeight', 'Bold','VerticalAlignment', 'top','HorizontalAlignment','center','color',UI.settings.primaryColor,'HitTest','off');
                 
+                sliderMovedManually = false;
+                UI.elements.lower.slider.Value = min([UI.t0/(UI.t_total-UI.settings.windowDuration)*100,100]);
+                if UI.settings.debug
+                    drawnow
+                end
+
                 if UI.settings.audioPlay                    
                     streamToc = toc(streamTicAudio_t0);
                     streamToc2 = UI.settings.replayRefreshInterval*UI.settings.windowDuration-toc(streamTicAudio);
