@@ -456,7 +456,7 @@ end
         uicontrol('Parent',UI.panel.general.stream_options,'Style','text','Units','normalized','Position',[0.01 0.51 0.70 0.49],'HorizontalAlignment','left','String','Stream speed');
         uicontrol('Parent',UI.panel.general.stream_options,'Style','popup','Units','normalized','Position',[0.71 0.51 0.28 0.49],'String',{'0.01x','0.1x','0.2x','0.25x','0.33x','0.5x','1x','1.5x','2x'},'value',7,'Callback',@updateStreamSpeed);
         uicontrol('Parent',UI.panel.general.stream_options,'Style','text','Units','normalized','Position',[0.01 0.01 0.70 0.49],'HorizontalAlignment','left','String','Refresh rate','tooltip','Fraction of window updated in streaming mode');
-        uicontrol('Parent',UI.panel.general.stream_options,'Style','popup','Units','normalized','Position',[0.71 0.01 0.28 0.49],'String',{'1/10','1/5','1/4','1/3','1/2','1'},'value',6,'Callback',@updateRefreshRate);
+            uicontrol('Parent',UI.panel.general.stream_options,'Style','popup','Units','normalized','Position',[0.71 0.01 0.28 0.49],'String',{'1/10','1/5','1/4','1/3','1/2','1'},'value',5,'Callback',@updateRefreshRate);
         
         % Electrophysiology
         UI.panel.general.filter = uipanel('Parent',UI.panel.general.main,'title','Extracellular traces');
@@ -2224,22 +2224,24 @@ end
             
         end
         
-        
         function plotEventLines(timestamps,clr,linewidth)
-            timestamps = timestamps(:)';
-            if UI.settings.plotTracesInColumns &&  ~UI.settings.showEventsBelowTrace(events_idx)
-                timestamps1 = timestamps'/UI.settings.columns+UI.settings.channels_relative_offset(UI.channelOrder);
-                xdata3 = ones(3,1)*timestamps1(:)';
-                
-                ydata3 = zeros(length(timestamps),1)-UI.channelOffset(UI.channelOrder);
-                ydata3 = [-UI.settings.columns_height/2;UI.settings.columns_height/2;nan]+ydata3(:)';
-
-                line(xdata3(:),ydata3(:),'Marker','none','LineStyle','-','color',clr, 'HitTest','off','linewidth',linewidth);
-            else
-                line([1;1]*timestamps,ydata2*ones(1,numel(timestamps)),'Marker','none','LineStyle','-','color',clr, 'HitTest','off','linewidth',linewidth);
-                
-            end            
+            plotLines(timestamps,ydata2,clr,'-',linewidth,~UI.settings.showEventsBelowTrace(events_idx));
         end
+    end
+
+    function plotLines(timestamps,ydata,clr,linestyle,linewidth,column_condition)
+        timestamps = timestamps(:)';
+        if UI.settings.plotTracesInColumns && column_condition
+            timestamps1 = timestamps'/UI.settings.columns+UI.settings.channels_relative_offset(UI.channelOrder);
+            xdata3 = ones(3,1)*timestamps1(:)';
+            
+            ydata3 = zeros(length(timestamps),1)-UI.channelOffset(UI.channelOrder);
+            ydata3 = [-UI.settings.columns_height/2;UI.settings.columns_height/2;nan]+ydata3(:)';
+
+            line(UI.plot_axis1,xdata3(:),ydata3(:),'Marker','none','LineStyle',linestyle,'color',clr,'HitTest','off','linewidth',linewidth);
+        else
+            line(UI.plot_axis1,[1;1]*timestamps,ydata*ones(1,numel(timestamps)),'Marker','none','LineStyle',linestyle,'color',clr,'HitTest','off','linewidth',linewidth);
+        end            
     end
 
     function plotTimeseriesData(timeserieName,t1,t2,colorIn)
@@ -2285,17 +2287,20 @@ end
         % TODO: generalize
 	    % TODO: missing channels - always 16 - 16?
 	    % TODO: make with provided mapping - calculate on the opening
-
-        map = reshape(ephys.traces(1,:), [16, 16]);
+        map = NaN(1, 256);
+        map(1, UI.channelOrder) = ephys.traces(UI.ecog_sample,UI.channelOrder);
+        map = reshape(map, [16, 16]);
         % TODO: maybe remove in the future
-        map = imgaussfilt(map, 1);
+        %map = imgaussfilt(map, 1);
         imagesc(UI.ecog_grid_axis, map);
-        clim([-1 1]*prctile(abs(ephys.traces(1,:)),99));
+        clim([-1 1]*prctile(abs(ephys.traces(UI.ecog_sample,:)),99));
+
+        % TODO: move out to function
+        plotLines(UI.ecog_sample/ephys.sr,[0;1],'white','--',1,true);
     end
 
     function plotChannelSpectrogram
-
-        SpecWindow = round(ephys.sr*UI.settings.channel_spectrogram.window);
+        SpecWindow = 2^floor(log2(UI.settings.channel_spectrogram.window * ephys.sr));
         nFFT = SpecWindow * 4;
         noverlap = [];
         TimeBand = 2;
@@ -2777,6 +2782,8 @@ end
         UI.settings.stream = false;
         if isempty(event.Modifier)
             switch event.Key
+                case 'space'
+                    streamData
                 case 'rightarrow'
                     advance(0.25)
                 case 'leftarrow'
@@ -2836,8 +2843,6 @@ end
         elseif strcmp(event.Modifier,'shift')
             UI.settings.normalClick = false;
             switch event.Key
-                case 'space'
-                    streamData
                 case 'rightarrow'
                     advance(1)
                 case 'leftarrow'
@@ -2904,19 +2909,23 @@ end
             set(UI.fig_ecog_grid,'CloseRequestFcn',@close_ecog_grid);
             % 'Position',[0 0 1 1],
             UI.ecog_grid_axis = axes('Parent', UI.fig_ecog_grid,'Units','Normalize','Clipping','off');
-            % plotEcogGrid();
+            UI.ecog_sample = round(size(ephys.traces, 1) / 2);
+            uiresume(UI.fig);
         else
             close_ecog_grid(UI.fig_ecog_grid);
         end
-        uiresume(UI.fig);
     end
 
     function close_ecog_grid(hObject, ~, ~)
-        if exist('UI.menu','var')
-            UI.menu.display.showEcogGrid.Checked = 'off';
-        end
-        UI.settings.showEcogGrid = false;
         delete(hObject);
+        UI.settings.showEcogGrid = false;
+        if isfield(UI,'ecog_sample')
+            UI = rmfield(UI, 'ecog_sample');
+        end
+        if isprop(UI.menu.display.showEcogGrid, 'Checked')
+            UI.menu.display.showEcogGrid.Checked = 'off';
+            uiresume(UI.fig);
+        end
         % TODO: see what more to clean
     end
     
@@ -5748,6 +5757,12 @@ end
                     if polygon1.counter > 1
                         set(polygon1.handle2(polygon1.counter-1),'Visible','off');
                     end
+                elseif UI.settings.showEcogGrid
+                    % TODO: set ECOG time
+                    UI.ecog_sample = round((t_click - UI.t0) * ephys.sr);
+                    UI.elements.lower.performance.String = ['Cursor: ',num2str(t_click),' sec'];
+                    uiresume(UI.fig);
+                                        
                 else % Otherwise show cursor time
                     UI.elements.lower.performance.String = ['Cursor: ',num2str(t_click),' sec'];
                 end
