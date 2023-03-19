@@ -2825,8 +2825,8 @@ end
                     decreaseAmplitude
                 case 'c'
                     answer = inputdlg('Provide channels to highlight','Highlighting');
-                    if ~isempty(answer) & isnumeric(str2num(answer{1})) & all(str2num(answer{1})>0)
-                        highlightTraces(str2num(answer{1}),[]);
+                    if ~isempty(answer) && isnumeric(str2double(answer{1})) && all(str2double(answer{1})>0)
+                        highlightTraces(str2double(answer{1}),[]);
                     end
                 case 'h'
                     HelpDialog
@@ -4444,8 +4444,8 @@ end
     function setTime(~,~)
         % Go to a specific timestamp
         UI.settings.stream = false;
-        string1 = str2num(UI.elements.lower.time.String);
-        if isnumeric(string1) & string1>=0
+        string1 = str2double(UI.elements.lower.time.String);
+        if isnumeric(string1) && string1>=0
             UI.t0 = valid_t0(string1);
             resetZoom
             uiresume(UI.fig);
@@ -4454,7 +4454,7 @@ end
 
     function setWindowsSize(~,~)
         % Set the window size
-        string1 = str2num(UI.elements.lower.windowsSize.String);
+        string1 = str2double(UI.elements.lower.windowsSize.String);
         string1 = string1(1);
         if isnumeric(string1) 
             if string1 < 0.001
@@ -4469,13 +4469,15 @@ end
             initTraces
             UI.forceNewData = true;
             resetZoom
+            if UI.settings.showEcogGrid && UI.ecog.sample > UI.settings.windowDuration * ephys.sr 
+                UI.ecog.sample = round(UI.settings.windowDuration * ephys.sr / 2);
+            end
             uiresume(UI.fig);
         end
     end
 
     function increaseWindowsSize(~,~)
         % Increase the window size
-        windowSize_old = UI.settings.windowDuration;
         UI.settings.windowDuration = min([UI.settings.windowDuration*2,100]);
         UI.elements.lower.windowsSize.String = num2str(UI.settings.windowDuration);
         initTraces
@@ -4485,11 +4487,13 @@ end
 
     function decreaseWindowsSize(~,~)
         % Decrease the window size
-        windowSize_old = UI.settings.windowDuration;
         UI.settings.windowDuration = max([UI.settings.windowDuration/2,0.125]);
         UI.elements.lower.windowsSize.String = num2str(UI.settings.windowDuration);
         initTraces
         UI.forceNewData = true;
+        if UI.settings.showEcogGrid && UI.ecog.sample > UI.settings.windowDuration * ephys.sr
+            UI.ecog.sample = round(UI.settings.windowDuration * ephys.sr / 2);
+        end
         uiresume(UI.fig);
     end
 
@@ -4510,8 +4514,8 @@ end
     end
 
     function setScaling(~,~)
-        string1 = str2num(UI.elements.lower.scaling.String);
-        if ~isempty(string1) && isnumeric(string1) && string1>=1  && string1<100000
+        string1 = str2double(UI.elements.lower.scaling.String);
+        if ~isempty(string1) && isnumeric(string1) && string1>=1 && string1<100000
             UI.settings.scalingFactor = string1;
             setScalingText
             initTraces
@@ -4555,7 +4559,7 @@ end
                     uiresume(UI.fig);
                 elseif UI.uitabgroup_channels.Selection == 4 && isfield(data.session.extracellular,'chanCoords') && ~isempty(data.session.extracellular.chanCoords.x) && ~isempty(data.session.extracellular.chanCoords.y)
                     image_toolbox_installed = isToolboxInstalled('Image Processing Toolbox');
-                    if ~verLessThan('matlab', '9.5') & image_toolbox_installed
+                    if ~verLessThan('matlab', '9.5') && image_toolbox_installed
                         x_lim_data = [min(data.session.extracellular.chanCoords.x),max(data.session.extracellular.chanCoords.x)];
                         y_lim_data = [min(data.session.extracellular.chanCoords.y),max(data.session.extracellular.chanCoords.y)];
                         x_padding = 0.03*diff(x_lim_data);
@@ -4586,11 +4590,11 @@ end
                 end
                 answer = inputdlg({'Tag name (e.g. Bad, Ripple, Theta)','Channels','Groups'},'Add channel tag', [1 50; 1 50; 1 50],{'',selectedChannels,''});
                 if ~isempty(answer) && ~strcmp(answer{1},'') && isvarname(answer{1}) && (~isfield(data.session,'channelTags') || ~ismember(answer{1},fieldnames(data.session.channelTags)))
-                    if ~isempty(answer{2}) && isnumeric(str2num(answer{2})) && all(str2num(answer{2})>0)
-                        data.session.channelTags.(answer{1}).channels = str2num(answer{2});
+                    if ~isempty(answer{2}) && isnumeric(str2double(answer{2})) && all(str2double(answer{2})>0)
+                        data.session.channelTags.(answer{1}).channels = str2double(answer{2});
                     end
-                    if ~isempty(answer{3}) && isnumeric(str2num(answer{3})) && all(str2num(answer{3})>0)
-                        data.session.channelTags.(answer{1}).electrodeGroups = str2num(answer{3});
+                    if ~isempty(answer{3}) && isnumeric(str2double(answer{3})) && all(str2double(answer{3})>0)
+                        data.session.channelTags.(answer{1}).electrodeGroups = str2double(answer{3});
                     end
                     updateChannelTags
                     uiresume(UI.fig);
@@ -5895,7 +5899,7 @@ end
                 
         switch get(UI.fig, 'selectiontype')
             case 'normal' % left mouse button                
-                
+                disp(['single click', num2str(t_click)]);
                 if UI.settings.addEventonClick == 1 % Adding new event
                     data.events.(UI.settings.eventData).added = unique([data.events.(UI.settings.eventData).added;t_click]);
                     UI.elements.lower.performance.String = ['Event added: ',num2str(t_click),' sec'];
@@ -5925,11 +5929,11 @@ end
                         set(polygon1.handle2(polygon1.counter-1),'Visible','off');
                     end
                 elseif UI.settings.showEcogGrid
-                    % TODO: set ECOG time
-                    UI.ecog.sample = round((t_click - UI.t0) * ephys.sr);
-                    UI.elements.lower.performance.String = ['Cursor: ',num2str(t_click),' sec'];
-                    uiresume(UI.fig);
-                                        
+                    if t_click >= UI.t0 && t_click <= (UI.t0 + UI.settings.windowDuration)
+                        UI.ecog.sample = round((t_click - UI.t0) * ephys.sr);
+                        UI.elements.lower.performance.String = ['Cursor: ',num2str(t_click),' sec'];
+                        uiresume(UI.fig);
+                    end                                        
                 else % Otherwise show cursor time
                     UI.elements.lower.performance.String = ['Cursor: ',num2str(t_click),' sec'];
                 end
@@ -6017,6 +6021,7 @@ end
                     end
                 end                
             case 'open'
+                disp(['double click', num2str(t_click)])
                 resetZoom
                 
             otherwise
