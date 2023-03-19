@@ -31,6 +31,7 @@ preferences.text_spacing = 0.016; % Vertical spacing between legends
 preferences.resetZoomOnNavigation = false;
 preferences.replayRefreshInterval = 0.5; % Fraction of window updated in replay mode
 preferences.streamSpeed = 1;
+preferences.samplesPerSecond = 5;
 preferences.insetRelativeWidth = 1/4;
 preferences.insetRelativeHeight = 1/4;
 preferences.stickySelection = false;

@@ -454,9 +454,11 @@ end
         % Streaming Options
         UI.panel.general.stream_options = uipanel('Parent',UI.panel.general.main,'title','Streaming Options');
         uicontrol('Parent',UI.panel.general.stream_options,'Style','text','Units','normalized','Position',[0.01 0.51 0.70 0.49],'HorizontalAlignment','left','String','Stream speed');
-        uicontrol('Parent',UI.panel.general.stream_options,'Style','popup','Units','normalized','Position',[0.71 0.51 0.28 0.49],'String',{'0.01x','0.1x','0.2x','0.25x','0.33x','0.5x','1x','1.5x','2x'},'value',7,'Callback',@updateStreamSpeed);
+        UI.speed.options_normal = {'0.01x','0.1x','0.2x','0.25x','0.33x','0.5x','1x','1.5x','2x'};
+        UI.speed.options_sps = {'1s','2s','5s','10s','20s'};
+        UI.panel.general.speed = uicontrol('Parent',UI.panel.general.stream_options,'Style','popup','Units','normalized','Position',[0.71 0.51 0.28 0.49],'String',UI.speed.options_normal,'value',7,'Callback',@updateStreamSpeed);
         uicontrol('Parent',UI.panel.general.stream_options,'Style','text','Units','normalized','Position',[0.01 0.01 0.70 0.49],'HorizontalAlignment','left','String','Refresh rate','tooltip','Fraction of window updated in streaming mode');
-            uicontrol('Parent',UI.panel.general.stream_options,'Style','popup','Units','normalized','Position',[0.71 0.01 0.28 0.49],'String',{'1/10','1/5','1/4','1/3','1/2','1'},'value',5,'Callback',@updateRefreshRate);
+        uicontrol('Parent',UI.panel.general.stream_options,'Style','popup','Units','normalized','Position',[0.71 0.01 0.28 0.49],'String',{'1/10','1/5','1/4','1/3','1/2','1'},'value',5,'Callback',@updateRefreshRate);
         
         % Electrophysiology
         UI.panel.general.filter = uipanel('Parent',UI.panel.general.main,'title','Extracellular traces');
@@ -1491,7 +1493,7 @@ end
         idx = find((data.behavior.(UI.settings.behaviorData).timestamps > t1 & data.behavior.(UI.settings.behaviorData).timestamps < t2));
         if ~isempty(idx)
             % PLots behavior data on top of the ephys
-            if UI.settings.plotBehaviorLinearized & isfield(data.behavior.(UI.settings.behaviorData).position,'linearized')
+            if UI.settings.plotBehaviorLinearized && isfield(data.behavior.(UI.settings.behaviorData).position,'linearized')
                 if UI.settings.showBehaviorBelowTrace
                     line(data.behavior.(UI.settings.behaviorData).timestamps(idx)-t1,data.behavior.(UI.settings.behaviorData).position.linearized(idx)/data.behavior.(UI.settings.behaviorData).limits.linearized(2)*diff(UI.dataRange.behavior)+UI.dataRange.behavior(1), 'Color', colorIn, 'HitTest','off','Marker','.','LineStyle','-','linewidth',2)
                 else
@@ -1940,7 +1942,7 @@ end
             spike_identity = raster.spike_identity;
             unique_electrodeGroups = unique(spike_identity);
             spike_identity_colormap = [0.3 0.3 1; 1 0.3 0.3];
-            labels_cell_types = {'Narrow waveform','Wide waveform'};
+            % labels_cell_types = {'Narrow waveform','Wide waveform'};
 %             addLegend('Population rate: waveform width')
             for i = 1:numel(unique_electrodeGroups)
                 idx_uids = spike_identity == i;
@@ -2229,7 +2231,7 @@ end
         end
     end
 
-    function plotLines(timestamps,ydata,clr,linestyle,linewidth,column_condition)
+    function [out]=plotLines(timestamps,ydata,clr,linestyle,linewidth,column_condition)
         timestamps = timestamps(:)';
         if UI.settings.plotTracesInColumns && column_condition
             timestamps1 = timestamps'/UI.settings.columns+UI.settings.channels_relative_offset(UI.channelOrder);
@@ -2238,9 +2240,9 @@ end
             ydata3 = zeros(length(timestamps),1)-UI.channelOffset(UI.channelOrder);
             ydata3 = [-UI.settings.columns_height/2;UI.settings.columns_height/2;nan]+ydata3(:)';
 
-            line(UI.plot_axis1,xdata3(:),ydata3(:),'Marker','none','LineStyle',linestyle,'color',clr,'HitTest','off','linewidth',linewidth);
+            out = line(UI.plot_axis1,xdata3(:),ydata3(:),'Marker','none','LineStyle',linestyle,'color',clr,'HitTest','off','linewidth',linewidth);
         else
-            line(UI.plot_axis1,[1;1]*timestamps,ydata*ones(1,numel(timestamps)),'Marker','none','LineStyle',linestyle,'color',clr,'HitTest','off','linewidth',linewidth);
+            out = line(UI.plot_axis1,[1;1]*timestamps,ydata*ones(1,numel(timestamps)),'Marker','none','LineStyle',linestyle,'color',clr,'HitTest','off','linewidth',linewidth);
         end            
     end
 
@@ -2284,19 +2286,20 @@ end
     end
 
     function plotEcogGrid
+        if isfield(UI.ecog,'line') && ~isempty(UI.ecog.line)
+            delete(UI.ecog.line);
+        end
+        UI.ecog.line = plotLines(UI.ecog.sample/ephys.sr,[0;1],'white','--',1,true);
         % TODO: generalize
 	    % TODO: missing channels - always 16 - 16?
 	    % TODO: make with provided mapping - calculate on the opening
         map = NaN(1, 256);
-        map(1, UI.channelOrder) = ephys.traces(UI.ecog_sample,UI.channelOrder);
+        map(1, UI.channelOrder) = ephys.traces(UI.ecog.sample,UI.channelOrder);
         map = reshape(map, [16, 16]);
         % TODO: maybe remove in the future
         %map = imgaussfilt(map, 1);
         imagesc(UI.ecog_grid_axis, map);
-        clim([-1 1]*prctile(abs(ephys.traces(UI.ecog_sample,:)),99));
-
-        % TODO: move out to function
-        plotLines(UI.ecog_sample/ephys.sr,[0;1],'white','--',1,true);
+        clim([-1 1]*prctile(abs(ephys.traces(UI.ecog.sample,:)),99));
     end
 
     function plotChannelSpectrogram
@@ -2458,7 +2461,7 @@ end
     function plotSpectrogram
         if ismember(UI.settings.spectrogram.channel,UI.channelOrder)
             spectrogram_range = UI.dataRange.spectrogram;
-            window = UI.settings.spectrogram.window;
+            % window = UI.settings.spectrogram.window;
             freq_range = UI.settings.spectrogram.freq_range;
             y_ticks = UI.settings.spectrogram.y_ticks;
             
@@ -2783,7 +2786,7 @@ end
         if isempty(event.Modifier)
             switch event.Key
                 case 'space'
-                    streamData
+                    streamDataNoSound
                 case 'rightarrow'
                     advance(0.25)
                 case 'leftarrow'
@@ -2904,13 +2907,17 @@ end
         if UI.settings.showEcogGrid
             UI.menu.display.showEcogGrid.Checked = 'on';
 
+            
             UI.fig_ecog_grid = figure('Name','ECoG Grid - TODO: name later','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter', 'none', 'DefaultLegendInterpreter', 'none', 'MenuBar', 'None');
             movegui(UI.fig_ecog_grid,'northeast'), set(UI.fig_ecog_grid,'visible','on')
             set(UI.fig_ecog_grid,'CloseRequestFcn',@close_ecog_grid);
             % 'Position',[0 0 1 1],
             UI.ecog_grid_axis = axes('Parent', UI.fig_ecog_grid,'Units','Normalize','Clipping','off');
-            UI.ecog_sample = round(size(ephys.traces, 1) / 2);
-            uiresume(UI.fig);
+            UI.ecog.sample = round(size(ephys.traces, 1) / 2);
+            
+            UI.panel.general.speed.Value = 3;
+            UI.panel.general.speed.String = UI.speed.options_sps;
+            updateStreamSpeed(UI.panel.general.speed);
         else
             close_ecog_grid(UI.fig_ecog_grid);
         end
@@ -2919,12 +2926,14 @@ end
     function close_ecog_grid(hObject, ~, ~)
         delete(hObject);
         UI.settings.showEcogGrid = false;
-        if isfield(UI,'ecog_sample')
-            UI = rmfield(UI, 'ecog_sample');
+        if isfield(UI,'ecog')
+            UI = rmfield(UI, 'ecog');
         end
         if isprop(UI.menu.display.showEcogGrid, 'Checked')
             UI.menu.display.showEcogGrid.Checked = 'off';
-            uiresume(UI.fig);
+            UI.panel.general.speed.String = UI.speed.options_normal;
+            UI.panel.general.speed.Value = 7;
+            updateStreamSpeed(UI.panel.general.speed);
         end
         % TODO: see what more to clean
     end
@@ -3284,7 +3293,7 @@ end
     
     function streamDataButtons
         if ~UI.settings.stream
-            streamData
+            streamDataNoSound
         else
             UI.settings.stream = false;
         end
@@ -3297,7 +3306,130 @@ end
             UI.settings.stream = false;
         end
     end
+
+    function streamDataNoSound
+        if ~UI.settings.stream
+            ended = false;
+            UI.settings.stream = true;
+            UI.settings.fileRead = 'bof';
+            UI.buttons.play1.String = [char(9646) char(9646)];
+            UI.elements.lower.performance.String = '  Streaming...';
     
+            if UI.settings.showEcogGrid
+                UI.streamingText = text(UI.plot_axis1,UI.settings.windowDuration/2,1,'Streaming','FontWeight', 'Bold','VerticalAlignment', 'top','HorizontalAlignment','center','color',UI.settings.primaryColor,'HitTest','off');
+            end
+    
+            while UI.settings.stream
+                streamTic = tic;
+                if UI.settings.showEcogGrid
+                    while UI.ecog.sample < size(ephys.traces, 1) && UI.settings.stream
+                        streamEcogTic = tic;
+                        UI.ecog.sample = UI.ecog.sample + 1;
+                        plotEcogGrid;
+                        
+                        streamToc = toc(streamEcogTic);
+                        pauseBins = ones(1,10) * ((1 / UI.settings.samplesPerSecond -streamToc)*0.1);
+                        
+                        pauseBins(cumsum(pauseBins)-streamToc<0) = [];
+    
+                        if ~isempty(pauseBins)
+                            for i = 1:numel(pauseBins)
+                                if UI.settings.stream
+                                    pause(pauseBins(i))
+                                end
+                            end
+                        end  
+                    end
+
+                    if ~UI.settings.stream
+                        break
+                    end
+                end
+                
+                end_t = UI.t0 + UI.settings.windowDuration;
+                UI.t0 = UI.t0+UI.settings.replayRefreshInterval*UI.settings.windowDuration;
+                if UI.t0 >= UI.t_total-UI.settings.windowDuration
+                    UI.t0 = max([0, UI.t_total-UI.settings.windowDuration]);
+                    ended = true;
+                    UI.settings.stream = false;
+
+                    UI.ecog.sample = max(1, round((end_t - UI.t0) * ephys.sr));
+                else
+                    UI.ecog.sample = max(1, round((1 - UI.settings.replayRefreshInterval) * UI.settings.windowDuration * ephys.sr));
+                end
+    
+                if ~ishandle(UI.fig)
+                    return
+                end
+    
+                plotData
+                UI.streamingText = text(UI.plot_axis1,UI.settings.windowDuration/2,1,'Streaming','FontWeight', 'Bold','VerticalAlignment', 'top','HorizontalAlignment','center','color',UI.settings.primaryColor,'HitTest','off');
+                
+                % Updating epoch axes
+                if ishandle(epoch_plotElements.t0)
+                    delete(epoch_plotElements.t0)
+                end
+                epoch_plotElements.t0 = line(UI.epochAxes,[UI.t0,UI.t0],[0,1],'color','k', 'HitTest','off','linewidth',1);
+    
+                % Updating UI text and slider
+                UI.elements.lower.time.String = num2str(UI.t0);
+                setTimeText(UI.t0)
+                
+                sliderMovedManually = false;
+                UI.elements.lower.slider.Value = min([UI.t0/(UI.t_total-UI.settings.windowDuration)*100,100]);
+                if UI.settings.debug
+                    drawnow
+                end
+    
+                if ~UI.settings.showEcogGrid
+                    streamToc = toc(streamTic);
+                    pauseBins = ones(1,10) * ((UI.settings.replayRefreshInterval / UI.settings.streamSpeed*UI.settings.windowDuration-streamToc)*0.1);
+                    pauseBins(cumsum(pauseBins)-streamToc<0) = [];
+                
+                    if ~isempty(pauseBins)
+                        for i = 1:numel(pauseBins)
+                            if UI.settings.stream
+                                pause(pauseBins(i))
+                            end
+                        end
+                    end
+                end
+            end
+
+            if UI.settings.showEcogGrid && ended
+                UI.settings.stream = true;
+                while UI.ecog.sample < size(ephys.traces, 1) && UI.settings.stream
+                    streamEcogTic = tic;
+                    UI.ecog.sample = UI.ecog.sample + 1;
+                    plotEcogGrid;
+                    
+                    streamToc = toc(streamEcogTic);
+                    pauseBins = ones(1,10) * ((1 / UI.settings.samplesPerSecond -streamToc)*0.1);
+                    
+                    pauseBins(cumsum(pauseBins)-streamToc<0) = [];
+
+                    if ~isempty(pauseBins)
+                        for i = 1:numel(pauseBins)
+                            if UI.settings.stream
+                                pause(pauseBins(i))
+                            end
+                        end
+                    end  
+                end
+
+                UI.settings.stream = false;
+            end
+    
+            UI.elements.lower.performance.String = '';
+        end
+        UI.settings.fileRead = 'bof';
+        if ishandle(UI.streamingText)
+            delete(UI.streamingText)
+        end
+        UI.buttons.play1.String = char(9654);
+        UI.buttons.play2.String = [char(9655) char(9654)];
+    end    
+
     function streamData
         % Streams  data from t0, updating traces twice per window duration (UI.settings.replayRefreshInterval)
         if ~UI.settings.stream
@@ -3311,9 +3443,41 @@ end
             else
                 UI.settings.playAudioFirst = false;
             end
-            
+                
             while UI.settings.stream
                 streamTic = tic;
+                
+                if UI.settings.showEcogGrid
+                    UI.streamingText = text(UI.plot_axis1,UI.settings.windowDuration/2,1,'Streaming','FontWeight', 'Bold','VerticalAlignment', 'top','HorizontalAlignment','center','color',UI.settings.primaryColor,'HitTest','off');
+                    while UI.ecog.sample < size(ephys.traces, 1)
+                        streamEcogTic = tic;
+                        UI.ecog.sample = UI.ecog.sample + 1;
+                        plotEcogGrid;
+                        
+                        streamToc = toc(streamEcogTic);
+                        pauseBins = ones(1,10) * ((1 / UI.settings.samplesPerSecond -streamToc)*0.1);
+                        
+                        % pauseBins = ones(1,10) * ((UI.settings.replayRefreshInterval / UI.settings.streamSpeed*UI.settings.windowDuration-streamToc)*0.1);
+                        pauseBins(cumsum(pauseBins)-streamToc<0) = [];
+
+                        if ~isempty(pauseBins)
+                            for i = 1:numel(pauseBins)
+                                if UI.settings.stream
+                                    pause(pauseBins(i))
+                                end
+                            end
+                        end
+                        if ~UI.settings.stream
+                            break
+                        end     
+                    end
+                    if UI.settings.stream
+                        UI.ecog.sample = round((1 - UI.settings.replayRefreshInterval) * UI.settings.windowDuration * ephys.sr);
+                    else
+                        break
+                    end
+                end
+
                 UI.t0 = UI.t0+UI.settings.replayRefreshInterval*UI.settings.windowDuration;
                 if UI.t0 >= UI.t_total-UI.settings.windowDuration
                     UI.t0 = max([0, UI.t_total-UI.settings.windowDuration]);
@@ -3343,6 +3507,9 @@ end
                 end
                 
                 plotData
+                if ~UI.settings.showEcogGrid
+                    UI.streamingText = text(UI.plot_axis1,UI.settings.windowDuration/2,1,'Streaming','FontWeight', 'Bold','VerticalAlignment', 'top','HorizontalAlignment','center','color',UI.settings.primaryColor,'HitTest','off');
+                end
                 
                 if UI.settings.audioPlay
                     highlightTraces(UI.settings.audioChannels,UI.settings.primaryColor);
@@ -3358,7 +3525,6 @@ end
                 % Updating UI text and slider
                 UI.elements.lower.time.String = num2str(UI.t0);
                 setTimeText(UI.t0)
-                UI.streamingText = text(UI.plot_axis1,UI.settings.windowDuration/2,1,'Streaming','FontWeight', 'Bold','VerticalAlignment', 'top','HorizontalAlignment','center','color',UI.settings.primaryColor,'HitTest','off');
                 
                 sliderMovedManually = false;
                 UI.elements.lower.slider.Value = min([UI.t0/(UI.t_total-UI.settings.windowDuration)*100,100]);
@@ -3376,6 +3542,7 @@ end
                     
                     pauseBins = ones(1,10) * streaming_delay*0.1;
                 else
+                % if ~UI.settings.showEcogGrid
                     streamToc = toc(streamTic);
                     pauseBins = ones(1,10) * ((UI.settings.replayRefreshInterval / UI.settings.streamSpeed*UI.settings.windowDuration-streamToc)*0.1);
                     pauseBins(cumsum(pauseBins)-streamToc<0) = [];
@@ -3398,11 +3565,11 @@ end
         end
         UI.buttons.play1.String = char(9654);
         UI.buttons.play2.String = [char(9655) char(9654)];
-        if UI.settings.audioPlay
-            release(deviceWriter)
-            UI.settings.deviceWriterActive = false;
-            UI.settings.playAudioFirst = false;
-        end        
+        % if UI.settings.audioPlay
+        %     release(deviceWriter)
+        %     UI.settings.deviceWriterActive = false;
+        %     UI.settings.playAudioFirst = false;
+        % end        
     end
     
     function streamData2
@@ -5759,7 +5926,7 @@ end
                     end
                 elseif UI.settings.showEcogGrid
                     % TODO: set ECOG time
-                    UI.ecog_sample = round((t_click - UI.t0) * ephys.sr);
+                    UI.ecog.sample = round((t_click - UI.t0) * ephys.sr);
                     UI.elements.lower.performance.String = ['Cursor: ',num2str(t_click),' sec'];
                     uiresume(UI.fig);
                                         
@@ -6066,19 +6233,26 @@ end
             UI.settings.plotEnergy = false;
         end
         answer = UI.panel.general.energyWindow.String;
-        if  ~isempty(answer) & isnumeric(str2num(answer))
-            UI.settings.energyWindow = str2num(answer);
+        if  ~isempty(answer) && isnumeric(str2double(answer))
+            UI.settings.energyWindow = str2double(answer);
         end
         uiresume(UI.fig);
     end
 
     function updateStreamSpeed(src,~)
-        UI.settings.streamSpeed = str2num(src.String{src.Value}(1:end-1));
+        if UI.settings.showEcogGrid
+            UI.settings.samplesPerSecond = str2double(src.String{src.Value}(1:end-1));
+        else
+            UI.settings.streamSpeed = str2double(src.String{src.Value}(1:end-1));
+        end
         uiresume(UI.fig);
     end
 
     function updateRefreshRate(src,~)
-        UI.settings.replayRefreshInterval = str2num(src.String{src.Value});
+        c = regexp(src.String{src.Value},'[0-9]+','match');
+        numerator = str2double(c{1});
+        denominator = str2double(c{2});
+        UI.settings.replayRefreshInterval = numerator / denominator;
         uiresume(UI.fig);
     end
 
