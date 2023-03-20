@@ -1,4 +1,5 @@
 function NeuroScope2(varargin)
+
 % % % % % % % % % % % % % % % % % % % % % % % % %
 % NeuroScope2 (BETA) is a visualizer for electrophysiological recordings. It was inspired by the original Neuroscope (http://neurosuite.sourceforge.net/)
 % and made to mimic its features, but built upon Matlab and the data structure of CellExplorer, making it much easier to hack/customize, 
@@ -25,7 +26,6 @@ function NeuroScope2(varargin)
 % plotData, plot_ephys, plotSpikeData, plotSpectrogram, plotTemporalStates, plotEventData, plotTimeseriesData, streamData
 % plotAnalog, plotDigital, plotBehavior, plotTrials, plotRMSnoiseInset, plotSpikesPCAspace
 % showEvents, showBehavior
-
 % Global variables
 UI = []; % Struct with UI elements and settings
 UI.t0 = 0; % Timestamp of the start of the current window (in seconds)
@@ -48,10 +48,10 @@ sliderMovedManually = false;
 deviceWriter = [];
 polygon1.handle = gobjects(0);
 
-spectrogram = [];
-spectrogram.ARmodel = [];
-spectrogram.channel = 1;
-spectrogram.recalculateWhiten = true;
+my_spectrogram = [];
+my_spectrogram.ARmodel = [];
+my_spectrogram.channel = 1;
+my_spectrogram.recalculateWhiten = true;
 
 if isdeployed % Check for if NeuroScope2 is running as a deployed app (compiled .exe or .app for windows and mac respectively)
     if ~isempty(varargin) % If a file name is provided it will load it.
@@ -213,7 +213,6 @@ end
 % % % % % % % % % % % % % % % % % % % % % %
 
     function initUI % Initialize the UI (settings, parameters, figure, menu, panels, axis)
-        
         % % % % % % % % % % % % % % % % % % % % % %
         % System settings
         % % % % % % % % % % % % % % % % % % % % % %
@@ -2255,8 +2254,8 @@ end
         
             %Whiten signal (using the common AR model computed for the first channel)
             % TODO: without parameters?
-            % wx = WhitenSignal(ephys.traces(:,c), ephys.sr * 2000, 1, spectrogram.ARmodel);
-            wx = WhitenSignal(ephys.traces(:,c), [], [], spectrogram.ARmodel);
+            % wx = WhitenSignal(ephys.traces(:,c), ephys.sr * 2000, 1, my_spectrogram.ARmodel);
+            wx = WhitenSignal(ephys.traces(:,c), [], [], my_spectrogram.ARmodel);
                         
             %Compute PSD for WHITENED signal
             [y(c,:), f] = mtcsdfast(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);
@@ -2305,18 +2304,18 @@ end
 
             % display(size(ephys.traces(:,UI.settings.my_spectrogram.channel)));
             if UI.panel.my_spectrogram.fullSpectrogram.Value == 1
-                if spectrogram.recalculateWhiten
+                if my_spectrogram.recalculateWhiten
                     % TODO: without parameters?
-                    % wx = WhitenSignal(ephys.full, ephys.sr * 2000, 1, spectrogram.ARmodel);
-                    ephys.wfull = WhitenSignal(ephys.full, [], [], spectrogram.ARmodel);
-                    spectrogram.recalculateWhiten = false;
+                    % wx = WhitenSignal(ephys.full, ephys.sr * 2000, 1, my_spectrogram.ARmodel);
+                    ephys.wfull = WhitenSignal(ephys.full, [], [], my_spectrogram.ARmodel);
+                    my_spectrogram.recalculateWhiten = false;
                 end
                 SpecWindow = 2^round(log2(1 * ephys.sr));
                 wx = ephys.wfull;
             else % Not decoupled
                 % TODO: without parameters?
-                % wx = WhitenSignal(ephys.traces(:,UI.settings.my_spectrogram.channel), ephys.sr * 2000, 1, spectrogram.ARmodel);
-                wx = WhitenSignal(ephys.traces(:,UI.settings.my_spectrogram.channel), [], [], spectrogram.ARmodel);
+                % wx = WhitenSignal(ephys.traces(:,UI.settings.my_spectrogram.channel), ephys.sr * 2000, 1, my_spectrogram.ARmodel);
+                wx = WhitenSignal(ephys.traces(:,UI.settings.my_spectrogram.channel), [], [], my_spectrogram.ARmodel);
                 SpecWindow = round(ephys.sr*UI.settings.my_spectrogram.window);
                 % SpecWindow = 2^round(log2(UI.settings.my_spectrogram.window * sr)); % choose window length as power of two
             end
@@ -2331,9 +2330,9 @@ end
             % FreqRange = freq_range; % TODO: can't be like that. format [[1 3], [3 5], ...]
             FreqRange = [UI.settings.my_spectrogram.freq_low UI.settings.my_spectrogram.freq_high];
             % TODO: check how FreqRange is passed
-            if (UI.panel.my_spectrogram.fullSpectrogram.Value == 1 && spectrogram.recalculateSpectrogram) || UI.panel.my_spectrogram.fullSpectrogram.Value == 0
-                [spectrogram.y, spectrogram.f, spectrogram.t] = mtcsglong(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);
-                spectrogram.recalculateSpectrogram = false;
+            if (UI.panel.my_spectrogram.fullSpectrogram.Value == 1 && my_spectrogram.recalculateSpectrogram) || UI.panel.my_spectrogram.fullSpectrogram.Value == 0
+                [my_spectrogram.y, my_spectrogram.f, my_spectrogram.t] = mtcsglong(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);
+                my_spectrogram.recalculateSpectrogram = false;
             end
             % display(size(y)); %- 8; 81            
             % display(size(t)); %- 8; 1
@@ -2341,7 +2340,7 @@ end
             % image(UI.plot_axis1,'XData',t,'YData',multiplier,'CData',scaling*log10(abs(s)), 'HitTest','off');
             % text(UI.plot_axis1,t(1)*ones(size(y_ticks)),axis_labels,num2str(y_ticks(:)),'FontWeight', 'Bold','color',UI.settings.primaryColor,'margin',1, 'HitTest','off','HorizontalAlignment','left','BackgroundColor',[0 0 0 0.5]);
             
-            ry = reshape(log(spectrogram.y), [], 1); ry = ry(~isinf(ry) & ~isnan(ry));
+            ry = reshape(log(my_spectrogram.y), [], 1); ry = ry(~isinf(ry) & ~isnan(ry));
             
             med = median(ry);
             dev = std(ry);
@@ -2350,7 +2349,7 @@ end
             end
                 
                 
-            multiplier = [0:size(spectrogram.f,1)-1]/(size(spectrogram.f,1)-1); % * diff(spectrogram_range)+spectrogram_range(1);
+            multiplier = [0:size(my_spectrogram.f,1)-1]/(size(my_spectrogram.f,1)-1); % * diff(spectrogram_range)+spectrogram_range(1);
             % t = t + (UI.settings.my_spectrogram.window) / 2;
             % multiplier = [0:size(s,1)-1]/(size(s,1)-1)*diff(spectrogram_range)+spectrogram_range(1);
             
@@ -2358,18 +2357,18 @@ end
             % display(size(y'));
             % display([f(1) f(end)]);
             
-            display([spectrogram.t(1) spectrogram.t(end)]);
+            display([my_spectrogram.t(1) my_spectrogram.t(end)]);
 
-            t_norm = normalize(spectrogram.t,'range',[0 1]);
+            t_norm = normalize(my_spectrogram.t,'range',[0 1]);
             display([t_norm(1) t_norm(end)]);
             % display(size(f));
             % display(size(multiplier));
             % display(freq_range);
 
-            axis_labels = interp1(spectrogram.f,multiplier,y_ticks);
+            axis_labels = interp1(my_spectrogram.f,multiplier,y_ticks);
             % display(axis_labels);
             
-            imagesc(UI.plot_spectrogram_axis,'XData', t_norm, 'YData', multiplier, 'CData', log(spectrogram.y)', 'HitTest','off');
+            imagesc(UI.plot_spectrogram_axis,'XData', t_norm, 'YData', multiplier, 'CData', log(my_spectrogram.y)', 'HitTest','off');
             % imagesc(UI.plot_axis1, t, f, log(squeeze(y))');
             text(UI.plot_spectrogram_axis,t_norm(1)*ones(size(y_ticks)),axis_labels,num2str(y_ticks(:)),'FontWeight', 'Bold','color',UI.settings.primaryColor,'margin',1, 'HitTest','off','HorizontalAlignment','left','BackgroundColor',[0 0 0 0.5]);
             
@@ -4667,10 +4666,10 @@ end
             if numeric_gt_0(channelnumber) && channelnumber<=data.session.extracellular.nChannels
                 UI.settings.my_spectrogram.channel = channelnumber;
                 UI.settings.my_spectrogram.show = true;
-                if channelnumber ~= spectrogram.channel
-                    spectrogram.channel = channelnumber;
+                if channelnumber ~= my_spectrogram.channel
+                    my_spectrogram.channel = channelnumber;
                     loadFullFile
-                    spectrogram.recalculateWhiten = true;
+                    my_spectrogram.recalculateWhiten = true;
                 end
             else
                 UI.settings.my_spectrogram.show = false;
@@ -4683,7 +4682,7 @@ end
             if numeric_gt_0(window) && window<UI.settings.windowDuration
                 UI.settings.my_spectrogram.window = window;
                 UI.settings.my_spectrogram.show = true;
-                spectrogram.recalculateSpectrogram = true;
+                my_spectrogram.recalculateSpectrogram = true;
             else
                 UI.settings.my_spectrogram.show = false;
                 MsgLog('The spectrogram window width is not valid',4);
@@ -4710,7 +4709,7 @@ end
                  
                 y_ticks = [y_tick_step*ceil(freq_range(1)/y_tick_step):y_tick_step:y_tick_step*floor(freq_range(end)/y_tick_step)];
                 UI.settings.my_spectrogram.y_ticks = y_ticks;
-                spectrogram.recalculateSpectrogram = true;
+                my_spectrogram.recalculateSpectrogram = true;
             else
                 UI.settings.my_spectrogram.show = false;
                 UI.panel.my_spectrogram.showSpectrogram.Value = 0;
@@ -5347,18 +5346,18 @@ end
             filesize = s1.bytes;
             UI.t_total = filesize/(data.session.extracellular.nChannels*data.session.extracellular.sr*2);
 
-            ephys.full = LoadBinary(UI.data.fileName, 'frequency', data.session.extracellular.sr, 'channels', spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
+            ephys.full = LoadBinary(UI.data.fileName, 'frequency', data.session.extracellular.sr, 'channels', my_spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
             % TODO: decide parameters
-            [~, spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.sr * 2000, 1);
+            [~, my_spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.sr * 2000, 1);
         elseif ~isempty(s2)
             filesize = s2.bytes;
             UI.t_total = filesize/(data.session.extracellular.nChannels*data.session.extracellular.srLfp*2);
             UI.settings.plotStyle = 4;
             UI.panel.general.plotStyle.Value = UI.settings.plotStyle;
 
-            ephys.full = LoadBinary(UI.data.fileNameLFP, 'frequency', data.session.extracellular.srLfp, 'channels', spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
+            ephys.full = LoadBinary(UI.data.fileNameLFP, 'frequency', data.session.extracellular.srLfp, 'channels', my_spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
             % TODO: decide parameters
-            [~, spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.srLfp * 2000, 1);
+            [~, my_spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.srLfp * 2000, 1);
         else
             warning('NeuroScope2: Binary data does not exist')
         end
