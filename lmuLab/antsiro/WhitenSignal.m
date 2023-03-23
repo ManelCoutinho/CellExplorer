@@ -11,17 +11,15 @@ function [y, A] = WhitenSignal(x,varargin)
 
 %artype =2; %Signal processing toolbox
 artype =1; %arfit toolbox, (crushes sometimes with old version and single data type)
-if artype==1
-    addpath('/home/manuelc/matlab/CellExplorer-master/my_code/antsiro/arfit'); %TODO: change this
-end
+
 [window,CommonAR, ARmodel,ArOrder] = DefaultArgs(varargin,{[],1,[],1});
 ArOrder = ArOrder+1;
 Trans = 0;
 if size(x,1)<size(x,2)
     x = x';
-    Transf =1;
+    Trans = 1;
 end
-[nT nCh]  = size(x);
+[nT, nCh]  = size(x);
 y = zeros(nT,nCh);
 if isempty(window)
     seg = [1 nT];
@@ -43,10 +41,10 @@ for j=1:nwin
     else
         if CommonAR % meaning common model for all channels and segments!!! 
             for i=1:nCh
-                if  j==1 & i==1
+                if  j==1 && i==1
                     switch artype
                         case 1
-                            [w Atmp] = arfit(x(seg(j,1):seg(j,2),i),ArOrder,ArOrder);
+                            [~, Atmp] = arfit(x(seg(j,1):seg(j,2),i),ArOrder,ArOrder);
                             A = [1 -Atmp];
                         case 2
                             A = arburg(x(seg(j,1):seg(j,2),i),ArOrder);
@@ -59,7 +57,7 @@ for j=1:nwin
             for i=1:nCh
                 switch artype
                     case 1
-                        [w Atmp] = arfit(x(seg(j,1):seg(j,2),i),ArOrder,ArOrder);
+                        [~, Atmp] = arfit(x(seg(j,1):seg(j,2),i),ArOrder,ArOrder);
                         A =[1 -Atmp];
                     case 2
                         A = arburg(x(seg(j,1):seg(j,2),i),ArOrder);
@@ -72,7 +70,4 @@ end
 
 if Trans
     y =y';
-end
-if artype==1
-rmpath('/home/manuelc/matlab/CellExplorer-master/my_code/antsiro/arfit'); %TODO: change this
 end

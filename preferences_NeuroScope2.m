@@ -116,6 +116,9 @@ preferences.showTrials = false;
 % Intan settings
 preferences.showTimeseriesBelowTrace = false;
 
+% Cluster
+preferences.cluster.algo = 1;
+
 % Spectrogram
 preferences.spectrogram.show = false;
 preferences.spectrogram.channel = 1;
