@@ -2334,41 +2334,20 @@ end
                 [my_spectrogram.y, my_spectrogram.f, my_spectrogram.t] = mtcsglong(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);
                 my_spectrogram.recalculateSpectrogram = false;
             end
+            disp(my_spectrogram.f);
             % display(size(y)); %- 8; 81            
             % display(size(t)); %- 8; 1
             % scaling = 200;
             % image(UI.plot_axis1,'XData',t,'YData',multiplier,'CData',scaling*log10(abs(s)), 'HitTest','off');
             % text(UI.plot_axis1,t(1)*ones(size(y_ticks)),axis_labels,num2str(y_ticks(:)),'FontWeight', 'Bold','color',UI.settings.primaryColor,'margin',1, 'HitTest','off','HorizontalAlignment','left','BackgroundColor',[0 0 0 0.5]);
             
-            ry = reshape(log(my_spectrogram.y), [], 1); ry = ry(~isinf(ry) & ~isnan(ry));
-            
-            med = median(ry);
-            dev = std(ry);
-            if isnan(dev) 
-                dev = med / 3; 
-            end
-                
-                
-            multiplier = [0:size(my_spectrogram.f,1)-1]/(size(my_spectrogram.f,1)-1); % * diff(spectrogram_range)+spectrogram_range(1);
-            % t = t + (UI.settings.my_spectrogram.window) / 2;
-            % multiplier = [0:size(s,1)-1]/(size(s,1)-1)*diff(spectrogram_range)+spectrogram_range(1);
-            
-            % display(y_ticks);
-            % display(size(y'));
-            % display([f(1) f(end)]);
-            
-            display([my_spectrogram.t(1) my_spectrogram.t(end)]);
-
             t_norm = normalize(my_spectrogram.t,'range',[0 1]);
-            display([t_norm(1) t_norm(end)]);
-            % display(size(f));
-            % display(size(multiplier));
-            % display(freq_range);
+            f_norm = normalize(my_spectrogram.f,'range',[0 1]);
 
-            axis_labels = interp1(my_spectrogram.f,multiplier,y_ticks);
+            axis_labels = interp1(my_spectrogram.f,f_norm,y_ticks);
             % display(axis_labels);
             
-            imagesc(UI.plot_spectrogram_axis,'XData', t_norm, 'YData', multiplier, 'CData', log(my_spectrogram.y)', 'HitTest','off');
+            imagesc(UI.plot_spectrogram_axis,'XData', t_norm, 'YData', f_norm, 'CData', log(my_spectrogram.y)', 'HitTest','off');
             % imagesc(UI.plot_axis1, t, f, log(squeeze(y))');
             text(UI.plot_spectrogram_axis,t_norm(1)*ones(size(y_ticks)),axis_labels,num2str(y_ticks(:)),'FontWeight', 'Bold','color',UI.settings.primaryColor,'margin',1, 'HitTest','off','HorizontalAlignment','left','BackgroundColor',[0 0 0 0.5]);
             
@@ -2376,11 +2355,17 @@ end
             if UI.panel.my_spectrogram.fullSpectrogram.Value == 1
                 line(UI.plot_spectrogram_axis,[UI.t0 / UI.t_total,UI.t0 / UI.t_total],[0,1],'color','k', 'LineStyle', '--', 'HitTest','off','linewidth',2);
             end
-            % axis xy;
-            % ylim([max(0, f(1)) min(f(end), 20)]);
+            
+            % ry = reshape(log(my_spectrogram.y), [], 1); ry = ry(~isinf(ry) & ~isnan(ry));
+            
+            % med = median(ry);
+            % dev = std(ry);
+            % if isnan(dev) 
+            %     dev = med / 3; 
+            % end
             % display([max(0, f(1)) min(f(end), 20)]);
 
-            clim(med + [-3 3] * dev); %ORIGINAL VERSION
+            % clim(med + [-3 3] * dev); %ORIGINAL VERSION
 
             %------------VERSION by Evgeny 10.11.2016: to scale when specs have artifacts ------%
             % disp('WARNING: modifed image color scaling by Evgeny 10.11.2016 in CheckEegStates.m, line 245!')
@@ -2388,8 +2373,6 @@ end
             % caxis([-5 0.5*max(a(:)) ]);
             % clear a
             %------------------------------------------------------------------------------------%
-
-            % ylabel('Frequency (Hz)');
 
             % Highlight corresponding channel
             if ismember(UI.settings.my_spectrogram.channel,UI.channelOrder)
