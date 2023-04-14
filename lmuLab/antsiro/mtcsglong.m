@@ -33,7 +33,7 @@ end
 
 for i=1:nChannels
     if VERBOSE
-        if i==1 tic; end
+        if i==1; tic; end
         if i==2 
             dur = toc; 
             durs = dur*(nChannels-1);
@@ -62,10 +62,10 @@ end
 if nargout == 0
     % take abs, and use image to display results
     newplot;
-    for Ch=1:nChannels, 
+    for Ch=1:nChannels
         subplot(nChannels, 1, Ch);
         imagesc(t,f,20*log10(abs(sq(y(:,:,Ch))')+eps));axis xy; colormap(jet)
-    end; 
+    end
     xlabel('Time')
     ylabel('Frequency')
 end

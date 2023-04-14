@@ -226,7 +226,7 @@ uiwait(load_tSNE.dialog)
             file = UI.data.fileNameLFP;
         end
         
-        spectrogram.channels = load_tSNE.channelList.Value;
+        spectrogram.channels = channels(load_tSNE.channelList.Value);
         spectrogram.nFFT = 2 * spectrogram.window_sample;
         
         % TODO: error verification (?)
@@ -284,6 +284,7 @@ uiwait(load_tSNE.dialog)
             new_channels_idx = find(all(data.y==0, [1, 2]));
             new_channels = spectrogram.channels(new_channels_idx);
         else
+            new_channels_idx = [];
             new_channels = spectrogram.channels;
         end
         if ~isempty(new_channels)
@@ -385,7 +386,7 @@ uiwait(load_tSNE.dialog)
         return
     end
 
-    function updateVariable(src,~)
+    function updateVariable(~,~)
         numeric_gt_0 = @(n) ~isempty(n) && isnumeric(n) && (n > 0); % numeric and greater than 0
         numeric_gte_0 = @(n) ~isempty(n) && isnumeric(n) && (n >= 0); % Numeric and greater than or equal to 0
 

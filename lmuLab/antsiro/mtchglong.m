@@ -1,4 +1,4 @@
-function [y, f, t, phi, FStats]=mtchglong(varargin);
+function [y, f, t, phi, FStats]=mtchglong(varargin)
 %function [yo, fo, to, phi, FStats]=mtchglong(x,nFFT,Fs,WinLength,nOverlap,NW,Detrend,nTapers,FreqRange);
 % Multitaper Time-Frequency Cross-Spectrum (cross spectrogram)
 % for long files - splits data into blockes to save memory
@@ -31,7 +31,7 @@ if nargout>3
     phi=complex(zeros(nFFTChunks,nFreqBins, nChannels, nChannels));
 end
 nFFTChunksall= nFFTChunks;
-freemem = FreeMemory;
+FreeMemory;
 BlockSize = 2^8;
 nBlocks = ceil(nFFTChunksall/BlockSize);
 %h = waitbar(0,'Wait..');
@@ -48,7 +48,7 @@ for Block=1:nBlocks
     eJ = complex(zeros(nFreqBins, nFFTChunks));
     tmpy =complex(zeros(nFreqBins,nFFTChunks, nChannels, nChannels));
     % calculate Slepian sequences.  Tapers is a matrix of size [WinLength, nTapers]
-    [Tapers V]=dpss(WinLength,NW,nTapers, 'calc');
+    [Tapers, V]=dpss(WinLength,NW,nTapers, 'calc');
     % New super duper vectorized alogirthm
     % compute tapered periodogram with FFT 
     % This involves lots of wrangling with multidimensional arrays.
@@ -143,7 +143,7 @@ if nargout == 0
                 imagesc(t,f,squeeze(phi(:,:,Ch1,Ch2))');axis xy; colormap(jet);colorbar
                 title(['Phasogram ' num2str(Ch1)]);
             end
-        end; end;
+    end; end
     xlabel('Time')
     ylabel('Frequency')
 end

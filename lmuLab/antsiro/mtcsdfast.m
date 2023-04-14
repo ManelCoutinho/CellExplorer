@@ -1,4 +1,4 @@
-function [yo, fo] = mtcsdfast(varargin);
+function [yo, fo] = mtcsdfast(varargin)
 % function [yo, fo]=mtcsdfast(x,nFFT,Fs,WinLength,nOverlap,NW,Detrend,nTapers, FreqRange, TriggTimes, ChannelPairs);
 %
 %A modification of the original Multitaper Cross-Spectral Density function mtcsd.m which:
@@ -51,12 +51,13 @@ if any(unique(ChannelPairs) > nChannels)
 end
 
 % calculate Slepian sequences.  Tapers is a matrix of size [WinLength, nTapers]
-if nFFTChunks==1
+[Tapers, V]=dpss(WinLength,NW,nTapers, 'calc');
+% if nFFTChunks==1
 %     [Tapers V]=dpss(nSamples,NW,nTapers, 'calc');  %original, which doesn't match a size of SegmentsArray later, when nFFTChunks=1 and WinLength<nSamples
-    [Tapers V]=dpss(WinLength,NW,nTapers, 'calc'); %temporal solution by Evgeny. Must be tested. ??? QUESTION What is different here?
-else
-    [Tapers V]=dpss(WinLength,NW,nTapers, 'calc');
-end
+%     [Tapers, V]=dpss(WinLength,NW,nTapers, 'calc'); %temporal solution by Evgeny. Must be tested. ??? QUESTION What is different here?
+% else
+%     [Tapers, V]=dpss(WinLength,NW,nTapers, 'calc');
+% end
 
 
 % New super duper 4D vectorized alogirthm
@@ -77,7 +78,7 @@ else %NEW
      
      %length of a sliding window halves around the triggering time  (assymetric in case of the even WinLength)
      nBefore = ceil((WinLength-1)/2);
-     nAfter   = fix((WinLength-1)/2);
+     nAfter  = fix((WinLength-1)/2);
      %discard triggering times with a window limits outside the signal (all windows must be of the same size)
      BadTriggTimes =  TriggTimes-nBefore<1  |  TriggTimes+nAfter>nSamples;
      TriggTimes(BadTriggTimes)=[];
@@ -220,11 +221,11 @@ if nargout == 0
 			ylabel('psd (dB)'); 
 		else 
 			ylabel('csd (dB)'); 
-		end;
+		end
 		xlabel('Frequency');
         title(['Ch' num2str(Ch1) ' vs. Ch'  num2str(Ch2)  ])
 %         axis tight
-	end; end;
+	end; end
 elseif nargout == 1
     yo = y;
 elseif nargout == 2
@@ -259,16 +260,16 @@ function [x,nFFT,Fs,WinLength,nOverlap,NW,Detrend,nTapers,nChannels,nSamples,nFF
 nargs = length(P);
 
 x = P{1};
-if (nargs<2 | isempty(P{2})) nFFT = 1024; else nFFT = P{2}; end;
-if (nargs<3 | isempty(P{3})) Fs = 1250; else Fs = P{3}; end;
-if (nargs<4 | isempty(P{4})) WinLength = nFFT; else WinLength = P{4}; end;
-if (nargs<5 | isempty(P{5})) nOverlap = WinLength/2; else nOverlap = P{5}; end;
-if (nargs<6 | isempty(P{6})) NW = 3; else NW = P{6}; end;
-if (nargs<7 | isempty(P{7})) Detrend = 'linear'; else Detrend = P{7}; end;
-if (nargs<8 | isempty(P{8})) nTapers = 2*NW -1; else nTapers = P{8}; end;
-if (nargs<9 | isempty(P{9})) FreqRange = [0 Fs/2]; else FreqRange = P{9}; end
-if (nargs<10 | isempty(P{10})) TriggTimes = []; else TriggTimes = P{10}; TriggTimes=TriggTimes(:); end %<--- added parameter
-if (nargs<11 | isempty(P{11})) ChannelPairs = []; else ChannelPairs = P{11};  end %<--- added parameter
+if (nargs<2 || isempty(P{2})); nFFT = 1024; else; nFFT = P{2}; end
+if (nargs<3 || isempty(P{3})); Fs = 1250; else; Fs = P{3}; end
+if (nargs<4 || isempty(P{4})); WinLength = nFFT; else; WinLength = P{4}; end
+if (nargs<5 || isempty(P{5})); nOverlap = WinLength/2; else; nOverlap = P{5}; end
+if (nargs<6 || isempty(P{6})); NW = 3; else; NW = P{6}; end
+if (nargs<7 || isempty(P{7})); Detrend = 'linear'; else; Detrend = P{7}; end
+if (nargs<8 || isempty(P{8})); nTapers = 2*NW -1; else; nTapers = P{8}; end
+if (nargs<9 || isempty(P{9})); FreqRange = [0 Fs/2]; else; FreqRange = P{9}; end
+if (nargs<10 || isempty(P{10})); TriggTimes = []; else; TriggTimes = P{10}; TriggTimes=TriggTimes(:); end %<--- added parameter
+if (nargs<11 || isempty(P{11})); ChannelPairs = []; else; ChannelPairs = P{11};  end %<--- added parameter
 
 % Now do some compuatations that are common to all spectrogram functions
 if size(x,1)<size(x,2)
@@ -299,7 +300,7 @@ end
 
 % set up f and t arrays
 if isreal(x)%~any(any(imag(x)))    % x purely real
-	if rem(nFFT,2),    % nfft odd
+	if rem(nFFT,2)    % nfft odd
 		select = [1:(nFFT+1)/2];
 	else
 		select = [1:nFFT/2+1];
@@ -378,20 +379,20 @@ function [M,IND] = combn(V,N)
 % 4.2 (apr 2011) corrrectly return a column vector for N = 1 (error pointed
 %      out by Wilson).
 
-error(nargchk(2,2,nargin)) ;
+narginchk(2, 2);
 
-if isempty(V) || N == 0,
+if isempty(V) || N == 0
     M = [] ;
     IND = [] ;
-elseif fix(N) ~= N || N < 1 || numel(N) ~= 1 ;
+elseif fix(N) ~= N || N < 1 || numel(N) ~= 1
     error('combn:negativeN','Second argument should be a positive integer') ;
-elseif N==1,
+elseif N==1
     % return column vectors
     M = V(:) ; 
     IND = (1:numel(V)).' ;
 else
     % speed depends on the number of output arguments
-    if nargout<2,
+    if nargout<2
         M = local_allcomb(V,N) ;
     else
         % indices requested

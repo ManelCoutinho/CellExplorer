@@ -29,7 +29,7 @@ if (nargout~=nDefArgs)
 end
 for i=1:nDefArgs
     
-    if (i>nInArgs | isempty(Args{i}))
+    if (i>nInArgs || isempty(Args{i}))
         varargout(i) = {DefArgs{i}};
     else 
         varargout(i) = {Args{i}};

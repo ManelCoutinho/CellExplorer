@@ -50,7 +50,7 @@ function [w, A, C, sbc, fpe, th]=arfit(v, pmin, pmax, selector, no_const)
   % n: number of observations; m: dimension of state vectors
   [n,m]   = size(v);     
 
-  if (pmin ~= round(pmin) | pmax ~= round(pmax))
+  if (pmin ~= round(pmin) || pmax ~= round(pmax))
     error('Order must be integer.');
   end
   if (pmax < pmin)
@@ -93,7 +93,7 @@ function [w, A, C, sbc, fpe, th]=arfit(v, pmin, pmax, selector, no_const)
 
   % get index iopt of order that minimizes the order selection 
   % criterion specified by the variable selector
-  [val, iopt]  = min(eval(selector)); 
+  [~, iopt]  = min(eval(selector)); 
 
   % select order of model
   popt         = pmin + iopt-1; % estimated optimum order 
@@ -115,7 +115,7 @@ function [w, A, C, sbc, fpe, th]=arfit(v, pmin, pmax, selector, no_const)
       % improve condition of R11 by re-scaling first column
       con 	= max(scale(2:npmax+m)) / scale(1); 
       R11(:,1)	= R11(:,1)*con; 
-    end;
+    end
     Aaug = (R11\R12)';
     
     %  return coefficient matrix A and intercept vector w separately

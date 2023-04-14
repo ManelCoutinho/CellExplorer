@@ -9,8 +9,6 @@ function [pow_smooth] = PowerSmoothing(pow_mean,WindowType,WinLength,plotting)
 %[x,nFFT,Fs,WinLength,nOverlap,NW,Detrend,nTapers,nChannels,...
 % nSamples,nFFTChunks,winstep,select,nFreqBins,f,t,FreqRange] = mtparam(varargin);
 
-padding=5;
-
 %movmedian: function for moving median window, give it a look, more robust
 switch WindowType
     case 'Hamming'

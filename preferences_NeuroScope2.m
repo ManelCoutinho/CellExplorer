@@ -135,6 +135,7 @@ preferences.spectrogram.freq_range = [preferences.spectrogram.freq_low:preferenc
 preferences.my_spectrogram.show = false;
 preferences.my_spectrogram.channel = 1;
 preferences.my_spectrogram.window = 0.2;
+preferences.my_spectrogram.overlap_perc = 80;
 preferences.my_spectrogram.freq_low = 1;
 preferences.my_spectrogram.freq_high = 100;
 

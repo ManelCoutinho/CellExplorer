@@ -662,20 +662,22 @@ end
 
         % My Spectrogram
         UI.panel.my_spectrogram.main = uipanel('Parent',UI.panel.analysis.main,'title','My Spectrogram');
-        UI.panel.my_spectrogram.showSpectrogram = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'checkbox','String','Show spectrogram', 'value', 0, 'Units','normalized', 'Position', [0.01 0.83 0.99 0.15],'Callback',@toggleMySpectrogram,'HorizontalAlignment','left');
-        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','└─', 'Units','normalized', 'Position', [0.01 0.68 0.09 0.15], 'HorizontalAlignment','left');
-        UI.panel.my_spectrogram.fullSpectrogram = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'checkbox','String','Decouple', 'value', 0, 'Units','normalized', 'Position', [0.10 0.68 0.99 0.15],'Enable', 'off','Callback',@toggleMySpectrogram, 'HorizontalAlignment','left');
+        UI.panel.my_spectrogram.showSpectrogram = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'checkbox','String','Show spectrogram', 'value', 0, 'Units','normalized', 'Position', [0.01 0.85 0.99 0.14],'Callback',@toggleMySpectrogram,'HorizontalAlignment','left');
+        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','└─', 'Units','normalized', 'Position', [0.01 0.71 0.09 0.14], 'HorizontalAlignment','left');
+        UI.panel.my_spectrogram.fullSpectrogram = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'checkbox','String','Decouple', 'value', 0, 'Units','normalized', 'Position', [0.10 0.71 0.99 0.14],'Enable', 'off','Callback',@toggleMySpectrogram, 'HorizontalAlignment','left');
         
-        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','Channel', 'Units','normalized', 'Position', [0.01 0.53 0.49 0.13],'HorizontalAlignment','left');
-        UI.panel.my_spectrogram.spectrogramChannel = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrogram.channel), 'Units','normalized', 'Position', [0.505 0.53 0.485 0.15],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
-        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','Window width (sec)', 'Units','normalized', 'Position', [0.01 0.38 0.49 0.15],'HorizontalAlignment','left');
-        UI.panel.my_spectrogram.spectrogramWindow = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrogram.window), 'Units','normalized', 'Position', [0.505 0.38 0.485 0.15],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','Channel', 'Units','normalized', 'Position', [0.01 0.57 0.49 0.14],'HorizontalAlignment','left');
+        UI.panel.my_spectrogram.spectrogramChannel = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrogram.channel), 'Units','normalized', 'Position', [0.505 0.57 0.485 0.14],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','Window width (sec)', 'Units','normalized', 'Position', [0.01 0.43 0.49 0.14],'HorizontalAlignment','left');
+        UI.panel.my_spectrogram.spectrogramWindow = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrogram.window), 'Units','normalized', 'Position', [0.505 0.43 0.485 0.14],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','Overlap (%)','Units','normalized','Position',[0.01, 0.29, 0.49, 0.14],'HorizontalAlignment','left');
+        UI.panel.my_spectrogram.overlap_perc = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style','Edit','String', num2str(UI.settings.my_spectrogram.overlap_perc),'Units','normalized','Position',[0.505 0.29 0.485 0.14],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+
+        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','Low freq (Hz)', 'Units','normalized', 'Position', [0.01 0.15 0.48 0.14],'HorizontalAlignment','left');
+        UI.panel.my_spectrogram.freq_low = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrogram.freq_low), 'Units','normalized', 'Position', [0.01 0.01 0.48 0.15],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
         
-        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','Low freq (Hz)', 'Units','normalized', 'Position', [0.01 0.17 0.48 0.14],'HorizontalAlignment','left');
-        UI.panel.my_spectrogram.freq_low = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrogram.freq_low), 'Units','normalized', 'Position', [0.01 0.01 0.48 0.17],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
-        
-        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','High freq (Hz)', 'Units','normalized', 'Position', [0.51 0.17 0.48 0.14],'HorizontalAlignment','left');
-        UI.panel.my_spectrogram.freq_high = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrogram.freq_high), 'Units','normalized', 'Position', [0.51 0.01 0.48 0.17],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','High freq (Hz)', 'Units','normalized', 'Position', [0.51 0.15 0.48 0.14],'HorizontalAlignment','left');
+        UI.panel.my_spectrogram.freq_high = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrogram.freq_high), 'Units','normalized', 'Position', [0.51 0.01 0.48 0.15],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
 
         % Channel Spectrogram
         UI.panel.channel_spectrogram.main = uipanel('Parent',UI.panel.analysis.main,'title','Channel Spectrogram');
@@ -741,9 +743,9 @@ end
         UI.panel.audio.rightChannel = uicontrol('Parent',UI.panel.audio.main,'Style', 'Edit', 'String', num2str(UI.settings.audioChannels(2)), 'Units','normalized', 'Position', [0.505 0 0.485 0.36],'HorizontalAlignment','center','tooltip','Right channel','Callback',@togglePlayAudio);
                 
         % Defining flexible panel heights
-        set(UI.panel.analysis.main, 'Heights', [165 120 150 60 100 100 100],'MinimumHeights',[165 120 150 60 100 100 100]);
+        set(UI.panel.analysis.main, 'Heights', [185 120 150 60 100 100 100],'MinimumHeights',[185 120 150 60 100 100 100]);
         UI.panel.analysis.main1.MinimumWidths = 218;
-        UI.panel.analysis.main1.MinimumHeights = 795;
+        UI.panel.analysis.main1.MinimumHeights = 815;
         
         % % % % % % % % % % % % % % % % % % % % % %
         % Lower info panel elements
@@ -2307,32 +2309,31 @@ end
             %Compute PSD for WHITENED signal
             [y(c,:), f] = mtcsdfast(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);
                     
-            clear wx
         end
+        clear wx
         % [y, f] = mtcsdfast(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);
         % TODO: test if channels not empty
-        imagesc(UI.plot_channel_spectrogram_axis,'XData', f, 'YData', UI.channelOrder, 'CData', y, 'HitTest','off');
-        clim([prctile(y(:),1) prctile(y(:),99)])
+        % TODO: should the yy order change?
+        imagesc(UI.plot_channel_spectrogram_axis,'XData', f, 'YData', 1:size(UI.channelOrder, 1), 'CData', y, 'HitTest','off');
+
+        clim(UI.plot_channel_spectrogram_axis, [prctile(y(:),1) prctile(y(:),99)])
         UI.plot_channel_spectrogram_axis.YDir = 'reverse';
         % display(channel([1 end]) + [-0.5 0.5]);
-        % if size(channel) <= 16
-        %     chanticks = channel;
+        % if size(UI.channelOrder, 1) <= 16
+        %     chanticks = [1:size(UI.channelOrder, 1)];
         % else
-        %     chanticks = channel(1:2:end);
+        %     chanticks = [1:2:size(UI.channelOrder, 1)];
         % end
-        set(UI.plot_channel_spectrogram_axis,'ylim', UI.channelOrder([1 end]) + [-0.5 0.5]);%, 'ytick', chanticks);
+        set(UI.plot_channel_spectrogram_axis,'ylim', UI.channelOrder([1 end]) + [-0.5 0.5]);%, 'ytick', chanticks,'yticklabel', []);
         % ftick = FreqRange(1) : 5 : FreqRange(2);
         set(UI.plot_channel_spectrogram_axis,'xlim', FreqRange);% ,'xtick', ftick,'xticklabel', ftick)
         % set(UI.plot_channel_spectrogram_axis,'ylim', chanlim, 'ytick', chanticks, 'yticklabel', [])
-        % display(channels);
-        % display(UI.settings.channelList);
-        
     end
 
     function plotMySpectrogram
         % display(UI.settings.my_spectrogram);
         if ismember(UI.settings.my_spectrogram.channel,UI.channelOrder)
-            display(ephys);
+            % display(ephys);
             % display(UI.settings.spectrogram.freq_range)
             y_ticks = UI.settings.my_spectrogram.y_ticks;
             
@@ -2364,13 +2365,14 @@ end
             else % Not decoupled
                 % TODO: without parameters?
                 % wx = WhitenSignal(ephys.traces(:,UI.settings.my_spectrogram.channel), ephys.sr * 2000, 1, my_spectrogram.ARmodel);
-                wx = WhitenSignal(ephys.traces(:,UI.settings.my_spectrogram.channel), [], [], my_spectrogram.ARmodel);
                 SpecWindow = round(ephys.sr*UI.settings.my_spectrogram.window);
+                wx = WhitenSignal(ephys.traces(:,UI.settings.my_spectrogram.channel), [], [], my_spectrogram.ARmodel);
             end
             nFFT = SpecWindow * 2;
             % max(256,2p), where p = ⌈log2 Nw⌉, the
             % TODO: add as parameter?
-            noverlap = [];%round(SpecWindow*0.9);
+            
+            noverlap = round(SpecWindow * UI.settings.my_spectrogram.overlap_perc / 100);
             TimeBand = 2;
             % TODO: see step
             % FreqRange = freq_range; % TODO: can't be like that. format [[1 3], [3 5], ...]
@@ -2380,22 +2382,28 @@ end
                 [my_spectrogram.y, my_spectrogram.f, my_spectrogram.t] = mtcsglong(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);
                 my_spectrogram.recalculateSpectrogram = false;
             end
-            disp(my_spectrogram.f);
+            % disp(my_spectrogram.f);
             % display(size(y)); %- 8; 81            
             % display(size(t)); %- 8; 1
             % scaling = 200;
             % image(UI.plot_axis1,'XData',t,'YData',multiplier,'CData',scaling*log10(abs(s)), 'HitTest','off');
             % text(UI.plot_axis1,t(1)*ones(size(y_ticks)),axis_labels,num2str(y_ticks(:)),'FontWeight', 'Bold','color',UI.settings.primaryColor,'margin',1, 'HitTest','off','HorizontalAlignment','left','BackgroundColor',[0 0 0 0.5]);
             
-            t_norm = normalize(my_spectrogram.t,'range',[0 1]);
-            f_norm = normalize(my_spectrogram.f,'range',[0 1]);
-
+            t_width = 1/size(my_spectrogram.t, 1);
+            f_width = 1/size(my_spectrogram.f, 1);
+            t_norm = normalize(my_spectrogram.t,'range',get(UI.plot_spectrogram_axis,'XLim') + [t_width/2 -t_width/2]);
+            f_norm = normalize(my_spectrogram.f,'range',get(UI.plot_spectrogram_axis,'YLim') + [f_width/2 -f_width/2]);
+            
             axis_labels = interp1(my_spectrogram.f,f_norm,y_ticks);
             % display(axis_labels);
             
-            imagesc(UI.plot_spectrogram_axis,'XData', t_norm, 'YData', f_norm, 'CData', log(my_spectrogram.y)', 'HitTest','off');
+            log_y = log(my_spectrogram.y)';
+            imagesc(UI.plot_spectrogram_axis,'XData',t_norm,'YData',f_norm,'CData',log_y,'HitTest','off');
             % imagesc(UI.plot_axis1, t, f, log(squeeze(y))');
-            text(UI.plot_spectrogram_axis,t_norm(1)*ones(size(y_ticks)),axis_labels,num2str(y_ticks(:)),'FontWeight', 'Bold','color',UI.settings.primaryColor,'margin',1, 'HitTest','off','HorizontalAlignment','left','BackgroundColor',[0 0 0 0.5]);
+            % set(UI.plot_spectrogram_axis,'ylim', [my_spectrogram.f(1) my_spectrogram.f(end)]);%, 'ytick', chanticks);
+            % set(UI.plot_spectrogram_axis,'xlim', [t_norm(1) - 0.5 t_norm(end) + 0.5]);%
+
+            text(UI.plot_spectrogram_axis,0*ones(size(y_ticks)),axis_labels,num2str(y_ticks(:)),'FontWeight', 'Bold','color',UI.settings.primaryColor,'margin',1, 'HitTest','off','HorizontalAlignment','left','BackgroundColor',[0 0 0 0.5]);
             
             
             if UI.panel.my_spectrogram.fullSpectrogram.Value == 1
@@ -2410,8 +2418,9 @@ end
             %     dev = med / 3; 
             % end
             % display([max(0, f(1)) min(f(end), 20)]);
-
             % clim(med + [-3 3] * dev); %ORIGINAL VERSION
+            clim(UI.plot_spectrogram_axis, [prctile(log_y(:),2) prctile(log_y(:),98)]);
+
 
             %------------VERSION by Evgeny 10.11.2016: to scale when specs have artifacts ------%
             % disp('WARNING: modifed image color scaling by Evgeny 10.11.2016 in CheckEegStates.m, line 245!')
@@ -2875,9 +2884,8 @@ end
         UI.settings.showEcogGrid = ~UI.settings.showEcogGrid;
         if UI.settings.showEcogGrid
             UI.menu.display.showEcogGrid.Checked = 'on';
-
             
-            UI.fig_ecog_grid = figure('Name','ECoG Grid - TODO: name later','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter', 'none', 'DefaultLegendInterpreter', 'none', 'MenuBar', 'None');
+            UI.fig_ecog_grid = figure('Name','ECoG Grid','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter','none','DefaultLegendInterpreter','none','MenuBar','None');
             movegui(UI.fig_ecog_grid,'northeast'), set(UI.fig_ecog_grid,'visible','on')
             set(UI.fig_ecog_grid,'CloseRequestFcn',@close_ecog_grid);
             % 'Position',[0 0 1 1],
@@ -3012,8 +3020,8 @@ end
 
         if UI.settings.colorDetectedSpikesByWidth
             answer = inputdlg('Max trough-to-peak of interneurons (ms)','Waveform width boundary', [1 50],{num2str(UI.settings.interneuronMaxWidth)});
-            if ~isempty(answer) && isnumeric(str2num(answer{1})) && str2num(answer{1}) > 0
-                UI.settings.interneuronMaxWidth = str2num(answer{1});
+            if ~isempty(answer) && isnumeric(str2double(answer{1})) && str2double(answer{1}) > 0
+                UI.settings.interneuronMaxWidth = str2double(answer{1});
                 UI.menu.display.colorDetectedSpikesByWidth.Checked = 'on';
                 UI.settings.showDetectedSpikeWaveforms = true;
                 UI.menu.display.showDetectedSpikeWaveforms.Checked = 'on';
@@ -3058,17 +3066,14 @@ end
         end        
         UI.settings.plotRMSnoise_apply_filter = UI.panel.RMSnoiseInset.filter.Value;
         if UI.panel.RMSnoiseInset.filter.Value == 3
-            UI.settings.plotRMSnoise_lowerBand = str2num(UI.panel.RMSnoiseInset.lowerBand.String);
-            UI.settings.plotRMSnoise_higherBand = str2num(UI.panel.RMSnoiseInset.higherBand.String);
+            UI.settings.plotRMSnoise_lowerBand = str2double(UI.panel.RMSnoiseInset.lowerBand.String);
+            UI.settings.plotRMSnoise_higherBand = str2double(UI.panel.RMSnoiseInset.higherBand.String);
         end
         
         uiresume(UI.fig);
     end
     
-    function toggleInstantaneousMetrics(~,~)
-        numeric_gt_0 = @(n) ~isempty(n) && isnumeric(n) && (n > 0); % numeric and greater than 0
-        numeric_gt_oe_0 = @(n) ~isempty(n) && isnumeric(n) && (n >= 0); % Numeric and greater than or equal to 0
-        
+    function toggleInstantaneousMetrics(~,~)        
         if UI.panel.instantaneousMetrics.showPower.Value == 1
             UI.settings.instantaneousMetrics.showPower = true;
         else
@@ -3088,7 +3093,7 @@ end
         end
         
         % Channel to use
-        channelnumber = str2num(UI.panel.instantaneousMetrics.channel.String);
+        channelnumber = str2double(UI.panel.instantaneousMetrics.channel.String);
         if isnumeric(channelnumber) && channelnumber>0 && channelnumber<=data.session.extracellular.nChannels
             UI.settings.instantaneousMetrics.channel = channelnumber;
             UI.settings.instantaneousMetrics.show = true;
@@ -3104,8 +3109,8 @@ end
         end
                 
         % Frequency range and step size
-        UI.settings.instantaneousMetrics.lowerBand = str2num(UI.panel.instantaneousMetrics.lowerBand.String);
-        UI.settings.instantaneousMetrics.higherBand = str2num(UI.panel.instantaneousMetrics.higherBand.String);
+        UI.settings.instantaneousMetrics.lowerBand = str2double(UI.panel.instantaneousMetrics.lowerBand.String);
+        UI.settings.instantaneousMetrics.higherBand = str2double(UI.panel.instantaneousMetrics.higherBand.String);
         
         initTraces
         uiresume(UI.fig);
@@ -4349,7 +4354,7 @@ end
         UI.settings.stream = false;
         answer = inputdlg('Go go a specific timepoint (sec)','Navigate to timepoint', [1 50]);
         if ~isempty(answer)
-            UI.t0 = valid_t0(str2num(answer{1}));
+            UI.t0 = valid_t0(str2double(answer{1}));
             resetZoom
             uiresume(UI.fig);
         end
@@ -4536,7 +4541,7 @@ end
             case 'Delete tag(s)'
                 if isfield(data.session,'channelTags') && ~isempty(fieldnames(data.session.channelTags))
                     list = fieldnames(data.session.channelTags);
-                    [indx,tf] = listdlg('ListString',list,'name','Delete tag(s)','PromptString','Select tag(s) to delete');
+                    [indx, ~] = listdlg('ListString',list,'name','Delete tag(s)','PromptString','Select tag(s) to delete');
                     if ~isempty(indx)
                         data.session.channelTags = rmfield(data.session.channelTags,list(indx));
                         updateChannelTags
@@ -4697,7 +4702,7 @@ end
             % Cell type list
             UI.listbox.cellTypes.Enable = 'on';
             [UI.params.cellTypes,~,clusClas] = unique(data.cell_metrics.putativeCellType);
-            UI.params.cell_class_count = histc(clusClas,1:length(UI.params.cellTypes));
+            UI.params.cell_class_count = histcounts(clusClas, 1:length(UI.params.cellTypes)+1);
             UI.params.cell_class_count = cellstr(num2str(UI.params.cell_class_count))';
             UI.listbox.cellTypes.String = strcat(UI.params.cellTypes,' (',UI.params.cell_class_count,')');
             UI.listbox.cellTypes.Value = 1:length(UI.params.cellTypes);
@@ -4738,7 +4743,7 @@ end
                 file = UI.data.fileNameLFP;
             end
 
-            display('Loading New Channel');
+            disp('Loading New Channel');
             ephys.full = LoadBinary(file, 'frequency', ephys.sr, 'channels', UI.settings.my_spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
         % TODO: check if free it or hold in memory
         % elseif UI.panel.my_spectrogram.fullSpectrogram.Value == 0 && ~isempty(ephys.full)
@@ -4755,7 +4760,7 @@ end
         
         if UI.panel.spectrogram.showSpectrogram.Value == 1
             % Channel to use
-            channelnumber = str2num(UI.panel.spectrogram.spectrogramChannel.String);
+            channelnumber = str2double(UI.panel.spectrogram.spectrogramChannel.String);
             if isnumeric(channelnumber) && channelnumber>0 && channelnumber<=data.session.extracellular.nChannels
                 UI.settings.spectrogram.channel = channelnumber;
                 UI.settings.spectrogram.show = true;
@@ -4766,7 +4771,7 @@ end
             end
             
             % Window width
-            window1 = str2num(UI.panel.spectrogram.spectrogramWindow.String);
+            window1 = str2double(UI.panel.spectrogram.spectrogramWindow.String);
             if numeric_gt_0(window1) && window1<UI.settings.windowDuration
                 UI.settings.spectrogram.window = window1;
                 UI.settings.spectrogram.show = true;
@@ -4777,9 +4782,9 @@ end
             end
             
             % Frequency range and step size
-            freq_low = str2num(UI.panel.spectrogram.freq_low.String);
-            freq_step_size = str2num(UI.panel.spectrogram.freq_step_size.String);
-            freq_high = str2num(UI.panel.spectrogram.freq_high.String);
+            freq_low = str2double(UI.panel.spectrogram.freq_low.String);
+            freq_step_size = str2double(UI.panel.spectrogram.freq_step_size.String);
+            freq_high = str2double(UI.panel.spectrogram.freq_high.String);
             freq_range = [freq_low : freq_step_size : freq_high];
             
             if numeric_gt_oe_0(freq_low) && numeric_gt_0(freq_step_size) && numeric_gt_0(freq_high) && freq_high > freq_low && numel(freq_range)>1
@@ -4817,7 +4822,7 @@ end
         if UI.panel.channel_spectrogram.showSpectrogram.Value == 1
 
             % Window width
-            window = str2num(UI.panel.channel_spectrogram.spectrogramWindow.String);
+            window = str2double(UI.panel.channel_spectrogram.spectrogramWindow.String);
             if numeric_gt_0(window) % && window<UI.settings.windowDuration %TODO: see if less than window constraint makes sense
                 UI.settings.channel_spectrogram.window = window;
                 UI.settings.channel_spectrogram.show = true;
@@ -4829,8 +4834,8 @@ end
             end
 
             % Frequency range
-            freq_low = str2num(UI.panel.channel_spectrogram.freq_low.String);
-            freq_high = str2num(UI.panel.channel_spectrogram.freq_high.String);
+            freq_low = str2double(UI.panel.channel_spectrogram.freq_low.String);
+            freq_high = str2double(UI.panel.channel_spectrogram.freq_high.String);
             freq_range = [freq_low freq_high];
 
             if numeric_gte_0(freq_low) && numeric_gt_0(freq_high) && freq_high > freq_low && numel(freq_range)>1 % && numeric_gt_0(freq_step_size)
@@ -4874,7 +4879,7 @@ end
             UI.panel.my_spectrogram.fullSpectrogram.Enable = 'on';
 
             % Channel to use
-            channelnumber = str2num(UI.panel.my_spectrogram.spectrogramChannel.String);
+            channelnumber = str2double(UI.panel.my_spectrogram.spectrogramChannel.String);
             if numeric_gt_0(channelnumber) && channelnumber<=data.session.extracellular.nChannels
                 UI.settings.my_spectrogram.channel = channelnumber;
                 UI.settings.my_spectrogram.show = true;
@@ -4890,7 +4895,7 @@ end
             end
 
             % Window width
-            window = str2num(UI.panel.my_spectrogram.spectrogramWindow.String);
+            window = str2double(UI.panel.my_spectrogram.spectrogramWindow.String);
             if numeric_gt_0(window) && window<UI.settings.windowDuration
                 UI.settings.my_spectrogram.window = window;
                 UI.settings.my_spectrogram.show = true;
@@ -4901,10 +4906,22 @@ end
                 return
             end
 
+            % Overlap
+            overlap_perc = str2double(UI.panel.my_spectrogram.overlap_perc.String);
+            if numeric_gte_0(overlap_perc) && overlap_perc<=100
+                UI.settings.my_spectrogram.overlap_perc = overlap_perc;
+                UI.settings.my_spectrogram.show = true;
+                my_spectrogram.recalculateSpectrogram = true;
+            else
+                UI.settings.my_spectrogram.show = false;
+                MsgLog('The spectrogram overlap is not a valid percentage',4);
+                return
+            end
+
             % Frequency range and step size
-            freq_low = str2num(UI.panel.my_spectrogram.freq_low.String);
-            % freq_step_size = str2num(UI.panel.my_spectrogram.freq_step_size.String);
-            freq_high = str2num(UI.panel.my_spectrogram.freq_high.String);
+            freq_low = str2double(UI.panel.my_spectrogram.freq_low.String);
+            % freq_step_size = str2double(UI.panel.my_spectrogram.freq_step_size.String);
+            freq_high = str2double(UI.panel.my_spectrogram.freq_high.String);
             freq_range = [freq_low freq_high];
 
             if numeric_gte_0(freq_low) && numeric_gt_0(freq_high) && freq_high > freq_low && numel(freq_range)>1
@@ -4930,8 +4947,10 @@ end
 
             if ~isfield(UI,'plot_spectrogram_axis')
                 % 'XMinorTick','on','XLim',[0,UI.settings.windowDuration],'YLim',[0,1],'YTickLabel',[],'Clipping','off'
-                % TODO: make variables for spectrogram size
-                UI.plot_spectrogram_axis = axes('Position',[0 0 UI.plot_axis1.Position(3) UI.axis.size.my_spectrogram], 'Parent',UI.panel.plots,'Units','Normalize','Color',UI.settings.background,'XColor',UI.settings.primaryColor,'TickLength',[0.005, 0.001], 'XLim',[0,UI.settings.windowDuration],'YLim',[0,1], 'Clipping','off', 'ButtonDownFcn',@ClickSpectrogram);
+                % TODO: make variables for spectrogram size                UI.plot_spectrogram_axis = axes('Position',[0 0 UI.plot_axis1.Position(3) UI.axis.size.my_spectrogram],'Parent',UI.panel.plots,'Units','Normalize','Color',UI.settings.background,'XColor',UI.settings.primaryColor,'TickLength',[0.005, 0.001], 'XLim',[0,UI.settings.windowDuration],'YLim',[0,1],'Clipping','off','ButtonDownFcn',@ClickSpectrogram);
+                UI.plot_spectrogram_axis = axes('Position',[0 0 UI.plot_axis1.Position(3) UI.axis.size.my_spectrogram],'Parent',UI.panel.plots,'Units','Normalize','Color',UI.settings.background,'XColor',UI.settings.primaryColor,'TickLength',[0.005, 0.001], 'XLim',[0 UI.settings.windowDuration],'YLim',[0 1],'Clipping','off','ButtonDownFcn',@ClickSpectrogram);
+
+                % UI.plot_spectrogram_axis = axes('Position',[0 0 UI.plot_axis1.Position(3) UI.axis.size.my_spectrogram],'Parent',UI.panel.plots,'Units','Normalize','Color',UI.settings.background,'XColor',UI.settings.primaryColor,'TickLength',[0.005 0.001], 'XLim',[0 UI.settings.windowDuration],'YLim',[0 1],'Clipping','off','ButtonDownFcn',@ClickSpectrogram);
                 UI.plot_axis1.Position = [UI.plot_axis1.Position(1) UI.plot_axis1.Position(2) + UI.axis.size.my_spectrogram UI.plot_axis1.Position(3) UI.plot_axis1.Position(4) - UI.axis.size.my_spectrogram];
                 hold on
                 % UI.plot_spectrogram_axis.XAxis.MinorTick = 'on';
@@ -5036,8 +5055,8 @@ end
     end
 
     function filterCellsByText(~,~)
-        if isnumeric(str2num(UI.panel.cell_metrics.textFilter.String)) && ~isempty(UI.panel.cell_metrics.textFilter.String) && ~isempty(str2num(UI.panel.cell_metrics.textFilter.String))
-                UI.params.subsetFilter = str2num(UI.panel.cell_metrics.textFilter.String);
+        if isnumeric(str2double(UI.panel.cell_metrics.textFilter.String)) && ~isempty(UI.panel.cell_metrics.textFilter.String) && ~isempty(str2double(UI.panel.cell_metrics.textFilter.String))
+                UI.params.subsetFilter = str2double(UI.panel.cell_metrics.textFilter.String);
         elseif ~isempty(UI.panel.cell_metrics.textFilter.String) && ~strcmp(UI.panel.cell_metrics.textFilter.String,'Filter')
             if isempty(UI.freeText)
                 UI.freeText = {''};
@@ -5067,13 +5086,13 @@ end
                     if length(newStr)==3 && isfield(data.cell_metrics,newStr{1}) && isnumeric(data.cell_metrics.(newStr{1})) && contains(newStr{2},{'==','>','<','~='})
                         switch newStr{2}
                             case '>'
-                                idx_textFilter2(i,:) = data.cell_metrics.(newStr{1}) > str2num(newStr{3});
+                                idx_textFilter2(i,:) = data.cell_metrics.(newStr{1}) > str2double(newStr{3});
                             case '<'
-                                idx_textFilter2(i,:) = data.cell_metrics.(newStr{1}) < str2num(newStr{3});
+                                idx_textFilter2(i,:) = data.cell_metrics.(newStr{1}) < str2double(newStr{3});
                             case '=='
-                                idx_textFilter2(i,:) = data.cell_metrics.(newStr{1}) == str2num(newStr{3});
+                                idx_textFilter2(i,:) = data.cell_metrics.(newStr{1}) == str2double(newStr{3});
                             case '~='
-                                idx_textFilter2(i,:) = data.cell_metrics.(newStr{1}) ~= str2num(newStr{3});
+                                idx_textFilter2(i,:) = data.cell_metrics.(newStr{1}) ~= str2double(newStr{3});
                             otherwise
                                 failCheck = 1;
                         end
@@ -5197,8 +5216,8 @@ end
         else
             UI.settings.showSpikeWaveforms = false;
         end
-        if numeric_gt_0(str2num(UI.panel.spikes.waveformsRelativeWidth.String))
-            UI.settings.waveformsRelativeWidth = str2num(UI.panel.spikes.waveformsRelativeWidth.String);
+        if numeric_gt_0(str2double(UI.panel.spikes.waveformsRelativeWidth.String))
+            UI.settings.waveformsRelativeWidth = str2double(UI.panel.spikes.waveformsRelativeWidth.String);
         end
         initTraces
         uiresume(UI.fig);
@@ -5211,7 +5230,7 @@ end
         else
             UI.settings.showSpikesPCAspace = false;
         end
-        PCA_electrodeGroup = str2num(UI.panel.spikes.PCA_electrodeGroup.String);
+        PCA_electrodeGroup = str2double(UI.panel.spikes.PCA_electrodeGroup.String);
         if numeric_gt_0(PCA_electrodeGroup)
             UI.settings.PCAspace_electrodeGroup = ceil(PCA_electrodeGroup);
             UI.panel.spikes.PCA_electrodeGroup.String = num2str(UI.settings.PCAspace_electrodeGroup);
@@ -5662,7 +5681,7 @@ end
             [CellExplorer_path,~,~] = fileparts(which('CellExplorer.m'));
             CellExplorer_path = fullfile(CellExplorer_path,'calc_CellMetrics');
         end
-        if exist(fullfile(CellExplorer_path,'data_NeuroScope2.mat'))
+        if exist(fullfile(CellExplorer_path,'data_NeuroScope2.mat'),'file')
             load(fullfile(CellExplorer_path,'data_NeuroScope2.mat'),'recentSessions');
             sameSession = (ismember(recentSessions.basepaths,basepath) & ismember(recentSessions.basenames,basename));
             recentSessions.basepaths(sameSession) = [];
@@ -5816,7 +5835,7 @@ end
                 if ismember(channel,UI.channelOrder)
                     highlightTraces(channel,'y');
                 end
-                uiresume(UI.fig);
+                % uiresume(UI.fig);
             otherwise
         end
     end
@@ -6049,7 +6068,7 @@ end
     
     function [channel_out,channel_valid] = validate_channel(channel_field)
         channel_valid = true;
-        channelnumber = str2num(channel_field);
+        channelnumber = str2double(channel_field);
         if isempty(channelnumber)
             channel_out = [];
         elseif isnumeric(channelnumber) && channelnumber > 0 && channelnumber <= data.session.extracellular.nChannels
@@ -6082,8 +6101,8 @@ end
     end
     
     function editChannelTags(~,evnt)
-        if evnt.Indices(1,2) == 6 & isnumeric(str2num(evnt.NewData))
-            data.session.channelTags.(UI.table.channeltags.Data{evnt.Indices(1,1),2}).channels = str2num(evnt.NewData);
+        if evnt.Indices(1,2) == 6 && isnumeric(str2double(evnt.NewData))
+            data.session.channelTags.(UI.table.channeltags.Data{evnt.Indices(1,1),2}).channels = str2double(evnt.NewData);
             initTraces
             uiresume(UI.fig);
         else
@@ -6211,8 +6230,8 @@ end
             UI.settings.filterTraces = false;
         else
             UI.settings.filterTraces = true;
-            UI.settings.filter.lowerBand = str2num(UI.panel.general.lowerBand.String);
-            UI.settings.filter.higherBand = str2num(UI.panel.general.higherBand.String);
+            UI.settings.filter.lowerBand = str2double(UI.panel.general.lowerBand.String);
+            UI.settings.filter.higherBand = str2double(UI.panel.general.higherBand.String);
             if int_gt_0(UI.settings.filter.lowerBand,data.session.extracellular.sr) && int_gt_0(UI.settings.filter.higherBand,data.session.extracellular.sr) 
                 UI.settings.filterTraces = false;
             elseif int_gt_0(UI.settings.filter.lowerBand,data.session.extracellular.sr) && ~int_gt_0(UI.settings.filter.higherBand,data.session.extracellular.sr)
@@ -6293,7 +6312,7 @@ end
     end
     
     function updateBrainRegionList
-        if isfield(data.session,'brainRegions') & ~isempty(data.session.brainRegions)
+        if isfield(data.session,'brainRegions') && ~isempty(data.session.brainRegions)
             brainRegions = fieldnames(data.session.brainRegions);
             tableData = {};
             for fn = 1:numel(brainRegions)
@@ -6369,7 +6388,7 @@ end
     end
     
     function updateTimeSeriesDataList % binary files
-        if isfield(data.session,'timeSeries') & ~isempty(data.session.timeSeries)
+        if isfield(data.session,'timeSeries') && ~isempty(data.session.timeSeries)
             timeSeries = fieldnames(data.session.timeSeries);
             tableData = {};
             for fn = 1:numel(timeSeries)
@@ -6433,8 +6452,8 @@ end
     function toogleDetectSpikes(~,~)
         if UI.panel.general.detectSpikes.Value == 1
             UI.settings.detectSpikes = true;
-            if isnumeric(str2num(UI.panel.general.detectThreshold.String)) && ~isempty(str2num(UI.panel.general.detectThreshold.String)) && ~isnan(str2num(UI.panel.general.detectThreshold.String))
-                UI.settings.spikesDetectionThreshold = str2num(UI.panel.general.detectThreshold.String);
+            if isnumeric(str2double(UI.panel.general.detectThreshold.String)) && ~isempty(str2double(UI.panel.general.detectThreshold.String)) && ~isnan(str2double(UI.panel.general.detectThreshold.String))
+                UI.settings.spikesDetectionThreshold = str2double(UI.panel.general.detectThreshold.String);
             end
         else
             UI.settings.detectSpikes = false;
@@ -6446,8 +6465,8 @@ end
     function toogleDetectEvents(~,~)
         if UI.panel.general.detectEvents.Value == 1
             UI.settings.detectEvents = true;
-            if isnumeric(str2num(UI.panel.general.eventThreshold.String))
-                UI.settings.eventThreshold = str2num(UI.panel.general.eventThreshold.String);
+            if isnumeric(str2double(UI.panel.general.eventThreshold.String))
+                UI.settings.eventThreshold = str2double(UI.panel.general.eventThreshold.String);
             end
         else
             UI.settings.detectEvents = false;
@@ -6612,7 +6631,7 @@ end
     function gotoEvents(~,~)
         UI.settings.stream = false;
         if any(UI.settings.showEvents)
-            UI.settings.iEvent = str2num(UI.panel.events.eventNumber.String);
+            UI.settings.iEvent = str2double(UI.panel.events.eventNumber.String);
             if ~isempty(UI.settings.iEvent) && isnumeric(UI.settings.iEvent) && UI.settings.iEvent <= numel(data.events.(UI.settings.eventData).time) && UI.settings.iEvent > 0
                 UI.panel.events.eventNumber.String = num2str(UI.settings.iEvent);
                 UI.t0 = data.events.(UI.settings.eventData).time(UI.settings.iEvent)-UI.settings.windowDuration/2;
@@ -6932,7 +6951,7 @@ end
         UI.settings.stream = false;
         if UI.settings.showStates
             timestamps = getTimestampsFromStates;
-            idx =  str2num(UI.panel.states.statesNumber.String);
+            idx =  str2double(UI.panel.states.statesNumber.String);
             if ~isempty(idx) && isnumeric(idx) && idx>0 && idx<=numel(timestamps)
                 UI.t0 = timestamps(idx);
                 uiresume(UI.fig);
@@ -7245,7 +7264,7 @@ end
     function gotoTrial(~,~)
         UI.settings.stream = false;
         if UI.settings.showTrials
-            idx = str2num(UI.panel.behavior.trialNumber.String);
+            idx = str2double(UI.panel.behavior.trialNumber.String);
             if ~isempty(idx) && isnumeric(idx) && idx>0 && idx<=numel(data.behavior.trials.start)
                 UI.t0 = data.behavior.trials.start(idx);
                 uiresume(UI.fig);
@@ -7255,11 +7274,11 @@ end
     end
     
     function tooglePopulationRate(~,~)
-        if isnumeric(str2num(UI.panel.spikes.populationRateWindow.String))
-            UI.settings.populationRateWindow = str2num(UI.panel.spikes.populationRateWindow.String);
+        if isnumeric(str2double(UI.panel.spikes.populationRateWindow.String))
+            UI.settings.populationRateWindow = str2double(UI.panel.spikes.populationRateWindow.String);
         end
-        if isnumeric(str2num(UI.panel.spikes.populationRateSmoothing.String))
-            UI.settings.populationRateSmoothing = str2num(UI.panel.spikes.populationRateSmoothing.String);
+        if isnumeric(str2double(UI.panel.spikes.populationRateSmoothing.String))
+            UI.settings.populationRateSmoothing = str2double(UI.panel.spikes.populationRateSmoothing.String);
         end
         if UI.panel.spikes.populationRate.Value == 1
             UI.settings.showPopulationRate = true;
@@ -7405,7 +7424,7 @@ end
                 
                 for i = 1: N_templates % which is equal to length(info.Groups(4).Datasets) = number of templates
                     spikes.times{i} = double(h5read(result_file,['/spiketimes/',info.Groups(4).Datasets(i).Name]))/data.session.extracellular.sr;
-                    template_number = str2num(erase(info.Groups(4).Datasets(i).Name,'temp_'));
+                    template_number = str2double(erase(info.Groups(4).Datasets(i).Name,'temp_'));
                     spikes.cluID(i) = template_number+1; %plus one since temps start with temp_0
                     spikes.total(i) = length(spikes.times{i});
                     spikes.maxWaveformCh1(i)=maxCh1(i); %preferred_electrodes(i);
@@ -7612,8 +7631,8 @@ end
     end
     
     function setTimeSeriesBoundary(~,~)
-        UI.settings.timeseries.lowerBoundary = str2num(UI.panel.timeseries.lowerBoundary.String);
-        UI.settings.timeseries.upperBoundary = str2num(UI.panel.timeseries.upperBoundary.String);
+        UI.settings.timeseries.lowerBoundary = str2double(UI.panel.timeseries.lowerBoundary.String);
+        UI.settings.timeseries.upperBoundary = str2double(UI.panel.timeseries.upperBoundary.String);
         if isempty(UI.settings.timeseries.lowerBoundary)
             UI.settings.timeseries.lowerBoundary = 0;
         end
@@ -7723,7 +7742,7 @@ end
             opts.Interpreter = 'tex';
             answer = inputdlg(prompt,dlgtitle,dims,definput,opts);
             if ~isempty(answer)
-                numeric_answer = str2num(answer{1});
+                numeric_answer = str2double(answer{1});
                 if ~isempty(answer{1}) && rem(numeric_answer,1)==0 && numeric_answer > 0 && numeric_answer <= 50
                     UI.settings.nColorGroups = numeric_answer;
                 end
@@ -7750,7 +7769,7 @@ end
             opts.Interpreter = 'tex';
             answer = inputdlg(prompt,dlgtitle,dims,definput,opts);
             if ~isempty(answer)
-                numeric_answer = str2num(answer{1});
+                numeric_answer = str2double(answer{1});
                 if ~isempty(answer{1}) && rem(numeric_answer,1)==0 && numeric_answer > 0 && numeric_answer <= 50
                     UI.settings.nColorGroups = numeric_answer;
                 end
