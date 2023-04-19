@@ -49,9 +49,13 @@ deviceWriter = [];
 polygon1.handle = gobjects(0);
 
 my_spectrogram = [];
+my_spectrogram.highlighted = [];
 my_spectrogram.ARmodel = [];
 my_spectrogram.channel = 1;
 my_spectrogram.recalculateWhiten = true;
+
+channel_spectrogram = [];
+channel_spectrogram.highlighted = [];
 
 if isdeployed % Check for if NeuroScope2 is running as a deployed app (compiled .exe or .app for windows and mac respectively)
     if ~isempty(varargin) % If a file name is provided it will load it.
@@ -312,7 +316,7 @@ end
 
         % Cluster figure
         UI.fig_cluster = figure('Name','Cluster','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter', 'none', 'DefaultLegendInterpreter', 'none', 'MenuBar', 'None', 'KeyPressFcn', @keyPressCluster);
-        set(UI.fig_cluster,'CloseRequestFcn','set(get(0,''CurrentFigure''),''visible'',''off'')');
+        set(UI.fig_cluster,'CloseRequestFcn',@close_cluster);
         UI.plot_cluster_axis = axes('Parent', UI.fig_cluster,'Units','Normalize','Position',[0 0 1 1],'Clipping','off');
 
         % % % % % % % % % % % % % % % % % % % % % %
@@ -656,39 +660,32 @@ end
         UI.panel.other.main1.MinimumWidths = 218;
         UI.panel.other.main1.MinimumHeights = 760;
         
-
+        
         % % % % % % % % % % % % % % % % % % % % % %
         % 4. PANEL: Analysis
 
-        % My Spectrogram
-        UI.panel.my_spectrogram.main = uipanel('Parent',UI.panel.analysis.main,'title','My Spectrogram');
-        UI.panel.my_spectrogram.showSpectrogram = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'checkbox','String','Show spectrogram', 'value', 0, 'Units','normalized', 'Position', [0.01 0.85 0.99 0.14],'Callback',@toggleMySpectrogram,'HorizontalAlignment','left');
-        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','└─', 'Units','normalized', 'Position', [0.01 0.71 0.09 0.14], 'HorizontalAlignment','left');
-        UI.panel.my_spectrogram.fullSpectrogram = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'checkbox','String','Decouple', 'value', 0, 'Units','normalized', 'Position', [0.10 0.71 0.99 0.14],'Enable', 'off','Callback',@toggleMySpectrogram, 'HorizontalAlignment','left');
+        % Improved Spectrograms
+        UI.panel.my_spectrograms.main = uipanel('Parent',UI.panel.analysis.main,'title','Improved Spectrograms');
+        UI.panel.my_spectrograms.showChannelSpectrogram = uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'checkbox','String','Show channel spectrogram', 'value', 0, 'Units','normalized', 'Position', [0.01 0.89 0.99 0.11],'Callback',@toggleMySpectrogram,'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.showSpectrogram = uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'checkbox','String','Show spectrogram', 'value', 0, 'Units','normalized', 'Position', [0.01 0.78 0.99 0.11],'Callback',@toggleMySpectrogram,'HorizontalAlignment','left');
+        uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'text','String','└─', 'Units','normalized','Position',[0.01 0.68 0.09 0.10], 'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.fullSpectrogram = uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'checkbox','String','Decouple', 'value', 0, 'Units','normalized', 'Position', [0.10 0.68 0.99 0.10],'Enable', 'off','Callback',@toggleMySpectrogram, 'HorizontalAlignment','left');
         
-        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','Channel', 'Units','normalized', 'Position', [0.01 0.57 0.49 0.14],'HorizontalAlignment','left');
-        UI.panel.my_spectrogram.spectrogramChannel = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrogram.channel), 'Units','normalized', 'Position', [0.505 0.57 0.485 0.14],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
-        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','Window width (sec)', 'Units','normalized', 'Position', [0.01 0.43 0.49 0.14],'HorizontalAlignment','left');
-        UI.panel.my_spectrogram.spectrogramWindow = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrogram.window), 'Units','normalized', 'Position', [0.505 0.43 0.485 0.14],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
-        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','Overlap (%)','Units','normalized','Position',[0.01, 0.29, 0.49, 0.14],'HorizontalAlignment','left');
-        UI.panel.my_spectrogram.overlap_perc = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style','Edit','String', num2str(UI.settings.my_spectrogram.overlap_perc),'Units','normalized','Position',[0.505 0.29 0.485 0.14],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+        uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'text','String','        Channel','Units','normalized','Position',[0.01 0.57 0.49 0.10],'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.spectrogramChannel = uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrograms.channel),'Units','normalized','Position',[0.505 0.56 0.485 0.12],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+    
+        UI.panel.my_spectrograms.settings.main = uipanel('Parent',UI.panel.my_spectrograms.main,'Units','normalized','Position',[0.01 0.01 0.99 0.52]);
 
-        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','Low freq (Hz)', 'Units','normalized', 'Position', [0.01 0.15 0.48 0.14],'HorizontalAlignment','left');
-        UI.panel.my_spectrogram.freq_low = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrogram.freq_low), 'Units','normalized', 'Position', [0.01 0.01 0.48 0.15],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+        uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style','text','String','Window width (s)','Units','normalized','Position',[0.01 0.73 0.49 0.24],'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.spectrogramWindow = uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrograms.window), 'Units','normalized', 'Position', [0.505 0.75 0.485 0.24],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+        uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style','text','String','Overlap      (%)','Units','normalized','Position',[0.01, 0.48, 0.49, 0.24],'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.overlap_perc = uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style','Edit','String', num2str(UI.settings.my_spectrograms.overlap_perc),'Units','normalized','Position',[0.505 0.50 0.485 0.24],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+
+        uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style', 'text','String','Low freq (Hz)', 'Units','normalized', 'Position', [0.01 0.22 0.48 0.24],'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.freq_low = uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrograms.freq_low), 'Units','normalized', 'Position', [0.01 0.01 0.48 0.24],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
         
-        uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'text','String','High freq (Hz)', 'Units','normalized', 'Position', [0.51 0.15 0.48 0.14],'HorizontalAlignment','left');
-        UI.panel.my_spectrogram.freq_high = uicontrol('Parent',UI.panel.my_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrogram.freq_high), 'Units','normalized', 'Position', [0.51 0.01 0.48 0.15],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
-
-        % Channel Spectrogram
-        UI.panel.channel_spectrogram.main = uipanel('Parent',UI.panel.analysis.main,'title','Channel Spectrogram');
-        UI.panel.channel_spectrogram.showSpectrogram = uicontrol('Parent',UI.panel.channel_spectrogram.main,'Style', 'checkbox','String','Show channel spectrogram', 'value', 0, 'Units','normalized', 'Position', [0.01 0.80 0.99 0.15],'Callback',@toggleChannelSpectrogram,'HorizontalAlignment','left');
-        uicontrol('Parent',UI.panel.channel_spectrogram.main,'Style', 'text','String','Window width (sec)', 'Units','normalized', 'Position', [0.01 0.53 0.49 0.17],'HorizontalAlignment','left');
-        UI.panel.channel_spectrogram.spectrogramWindow = uicontrol('Parent',UI.panel.channel_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.channel_spectrogram.window), 'Units','normalized', 'Position', [0.505 0.50 0.485 0.24],'Callback',@toggleChannelSpectrogram,'HorizontalAlignment','center');
-         
-        uicontrol('Parent',UI.panel.channel_spectrogram.main,'Style', 'text','String','Low freq (Hz)', 'Units','normalized', 'Position', [0.01 0.27 0.48 0.19],'HorizontalAlignment','left');
-        UI.panel.channel_spectrogram.freq_low = uicontrol('Parent',UI.panel.channel_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.channel_spectrogram.freq_low), 'Units','normalized', 'Position', [0.01 0.01 0.48 0.24],'Callback',@toggleChannelSpectrogram,'HorizontalAlignment','center');
-        uicontrol('Parent',UI.panel.channel_spectrogram.main,'Style', 'text','String','High freq (Hz)', 'Units','normalized', 'Position', [0.51 0.27 0.48 0.19],'HorizontalAlignment','left');
-        UI.panel.channel_spectrogram.freq_high = uicontrol('Parent',UI.panel.channel_spectrogram.main,'Style', 'Edit', 'String', num2str(UI.settings.channel_spectrogram.freq_high), 'Units','normalized', 'Position', [0.51 0.01 0.48 0.24],'Callback',@toggleChannelSpectrogram,'HorizontalAlignment','center'); 
+        uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style', 'text','String','High freq (Hz)', 'Units','normalized', 'Position', [0.51 0.22 0.48 0.24],'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.freq_high = uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrograms.freq_high), 'Units','normalized', 'Position', [0.51 0.01 0.48 0.24],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
         
         % Spectrogram
         UI.panel.spectrogram.main = uipanel('Parent',UI.panel.analysis.main,'title','Spectrogram');
@@ -743,9 +740,9 @@ end
         UI.panel.audio.rightChannel = uicontrol('Parent',UI.panel.audio.main,'Style', 'Edit', 'String', num2str(UI.settings.audioChannels(2)), 'Units','normalized', 'Position', [0.505 0 0.485 0.36],'HorizontalAlignment','center','tooltip','Right channel','Callback',@togglePlayAudio);
                 
         % Defining flexible panel heights
-        set(UI.panel.analysis.main, 'Heights', [185 120 150 60 100 100 100],'MinimumHeights',[185 120 150 60 100 100 100]);
+        set(UI.panel.analysis.main, 'Heights', [210 150 60 100 100 100],'MinimumHeights',[210 150 60 100 100 100]);
         UI.panel.analysis.main1.MinimumWidths = 218;
-        UI.panel.analysis.main1.MinimumHeights = 815;
+        UI.panel.analysis.main1.MinimumHeights = 720;
         
         % % % % % % % % % % % % % % % % % % % % % %
         % Lower info panel elements
@@ -829,12 +826,12 @@ end
         end
 
         % My Spectrogram
-        if UI.settings.my_spectrogram.show && ephys.loaded
+        if UI.settings.showMySpectrogram && ephys.loaded
             plotMySpectrogram
         end
 
         % Channel Spectrogram
-        if UI.settings.channel_spectrogram.show && ephys.loaded
+        if UI.settings.showChannelSpectrogram && ephys.loaded
             plotChannelSpectrogram
         end
         
@@ -2282,20 +2279,30 @@ end
 	    % TODO: make with provided mapping - calculate on the opening
         map = NaN(1, 256);
         map(1, UI.channelOrder) = ephys.traces(UI.ecog.sample,UI.channelOrder);
-        map = reshape(map, [16, 16]);
+        map = reshape(map, [16, 16]).';
         % TODO: maybe remove in the future
         %map = imgaussfilt(map, 1);
-        imagesc(UI.ecog_grid_axis, map);
+        imagesc(UI.ecog_grid_axis, map,'HitTest','off');
+        % TODO: see why this has to happen
+        set(UI.ecog_grid_axis, 'ButtonDownFcn',@ClickEcogGrid);
         clim([-1 1]*prctile(abs(ephys.traces(UI.ecog.sample,:)),99));
+
+        if UI.settings.my_spectrograms.highlight_channel
+            y = floor((UI.settings.my_spectrograms.channel - 1) / 16);
+            x = mod(UI.settings.my_spectrograms.channel - 1, 16);
+
+            line(UI.ecog_grid_axis,[x+0.5,x+0.5,x+1.5,x+1.5,x+0.5],[y+0.5,y+1.5,y+1.5,y+0.5,y+0.5],'color',[0.5,0.5,0.5],'linewidth',2)
+
+        end
     end
 
     function plotChannelSpectrogram
-        SpecWindow = 2^floor(log2(UI.settings.channel_spectrogram.window * ephys.sr));
+        SpecWindow = 2^floor(log2(UI.settings.my_spectrograms.window * ephys.sr));
         % SpecWindow = round(ephys.sr*UI.settings.channel_spectrogram.window);
-        nFFT = SpecWindow * 4;
-        noverlap = [];
+        nFFT = SpecWindow * 2;
+        noverlap = round(SpecWindow * UI.settings.my_spectrograms.overlap_perc / 100);
         TimeBand = 2;
-        FreqRange = [UI.settings.channel_spectrogram.freq_low UI.settings.channel_spectrogram.freq_high];
+        FreqRange = [UI.settings.my_spectrograms.freq_low UI.settings.my_spectrograms.freq_high];
         y = [];
         f = [];
 
@@ -2311,10 +2318,14 @@ end
                     
         end
         clear wx
-        % [y, f] = mtcsdfast(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);
+        y = y(UI.channelOrder, :);
         % TODO: test if channels not empty
         % TODO: should the yy order change?
-        imagesc(UI.plot_channel_spectrogram_axis,'XData', f, 'YData', 1:size(UI.channelOrder, 1), 'CData', y, 'HitTest','off');
+
+        f_width = 1/size(f, 1);
+        f_norm = normalize(f,'range',get(UI.plot_channel_spectrogram_axis,'XLim') + [f_width/2 -f_width/2]);
+            
+        imagesc(UI.plot_channel_spectrogram_axis,'XData', f_norm, 'YData', 1:size(UI.channelOrder, 1), 'CData', y, 'HitTest','off');
 
         clim(UI.plot_channel_spectrogram_axis, [prctile(y(:),1) prctile(y(:),99)])
         UI.plot_channel_spectrogram_axis.YDir = 'reverse';
@@ -2324,18 +2335,27 @@ end
         % else
         %     chanticks = [1:2:size(UI.channelOrder, 1)];
         % end
-        set(UI.plot_channel_spectrogram_axis,'ylim', UI.channelOrder([1 end]) + [-0.5 0.5]);%, 'ytick', chanticks,'yticklabel', []);
+        [minY, maxY] = bounds(UI.channelOrder);
+        set(UI.plot_channel_spectrogram_axis,'ylim', [minY+0.5 maxY-0.5] );%, 'ytick', chanticks,'yticklabel', []);
         % ftick = FreqRange(1) : 5 : FreqRange(2);
-        set(UI.plot_channel_spectrogram_axis,'xlim', FreqRange);% ,'xtick', ftick,'xticklabel', ftick)
+        % set(UI.plot_channel_spectrogram_axis,'xlim', FreqRange);% ,'xtick', ftick,'xticklabel', ftick)
         % set(UI.plot_channel_spectrogram_axis,'ylim', chanlim, 'ytick', chanticks, 'yticklabel', [])
+        y_ticks = UI.settings.my_spectrograms.freq_ticks;
+        axis_labels = interp1(f,f_norm,y_ticks);
+        prov = get(UI.plot_channel_spectrogram_axis,'ylim');
+        text(UI.plot_channel_spectrogram_axis,axis_labels, (prov(2)-3)*ones(size(y_ticks)),num2str(y_ticks(:)),'FontWeight', 'Bold','color',UI.settings.primaryColor,'margin',1, 'HitTest','off','HorizontalAlignment','left','BackgroundColor',[0 0 0 0.5]);
+        
+        if UI.settings.my_spectrograms.highlight_channel && ismember(UI.settings.my_spectrograms.channel,UI.channelOrder)
+            highlightTraces(UI.settings.my_spectrograms.channel,'y')
+        end
     end
 
     function plotMySpectrogram
         % display(UI.settings.my_spectrogram);
-        if ismember(UI.settings.my_spectrogram.channel,UI.channelOrder)
+        if ismember(UI.settings.my_spectrograms.channel,UI.channelOrder)
             % display(ephys);
             % display(UI.settings.spectrogram.freq_range)
-            y_ticks = UI.settings.my_spectrogram.y_ticks;
+            y_ticks = UI.settings.my_spectrograms.freq_ticks;
             
             
             % [s, ~, t] = spectrogram(
@@ -2350,8 +2370,7 @@ end
             % display(size(t)); %- 1; 84
 
 
-            % display(size(ephys.traces(:,UI.settings.my_spectrogram.channel)));
-            if UI.panel.my_spectrogram.fullSpectrogram.Value == 1
+            if UI.panel.my_spectrograms.fullSpectrogram.Value == 1
                 if my_spectrogram.recalculateWhiten
                     % TODO: without parameters?
                     % wx = WhitenSignal(ephys.full, ephys.sr * 2000, 1, my_spectrogram.ARmodel);
@@ -2359,26 +2378,24 @@ end
                     my_spectrogram.recalculateWhiten = false;
                 end
                 % TODO: enable my_spectrogram window > window duration for decouple
-                % SpecWindow = 2^round(log2(UI.settings.my_spectrogram.window * sr)); % choose window length as power of two
-                SpecWindow = 2^round(log2(1 * ephys.sr));
                 wx = ephys.wfull;
             else % Not decoupled
                 % TODO: without parameters?
-                % wx = WhitenSignal(ephys.traces(:,UI.settings.my_spectrogram.channel), ephys.sr * 2000, 1, my_spectrogram.ARmodel);
-                SpecWindow = round(ephys.sr*UI.settings.my_spectrogram.window);
-                wx = WhitenSignal(ephys.traces(:,UI.settings.my_spectrogram.channel), [], [], my_spectrogram.ARmodel);
+                % wx = WhitenSignal(ephys.traces(:,UI.settings.my_spectrograms.channel), ephys.sr * 2000, 1, my_spectrogram.ARmodel);
+                wx = WhitenSignal(ephys.traces(:,UI.settings.my_spectrograms.channel), [], [], my_spectrogram.ARmodel);
             end
+            % TODO: different window for decouple ?
+            SpecWindow = 2^floor(log2(UI.settings.my_spectrograms.window * ephys.sr));
             nFFT = SpecWindow * 2;
-            % max(256,2p), where p = ⌈log2 Nw⌉, the
             % TODO: add as parameter?
             
-            noverlap = round(SpecWindow * UI.settings.my_spectrogram.overlap_perc / 100);
+            noverlap = round(SpecWindow * UI.settings.my_spectrograms.overlap_perc / 100);
             TimeBand = 2;
             % TODO: see step
             % FreqRange = freq_range; % TODO: can't be like that. format [[1 3], [3 5], ...]
-            FreqRange = [UI.settings.my_spectrogram.freq_low UI.settings.my_spectrogram.freq_high];
+            FreqRange = [UI.settings.my_spectrograms.freq_low UI.settings.my_spectrograms.freq_high];
             % TODO: check how FreqRange is passed
-            if (UI.panel.my_spectrogram.fullSpectrogram.Value == 1 && my_spectrogram.recalculateSpectrogram) || UI.panel.my_spectrogram.fullSpectrogram.Value == 0
+            if (UI.panel.my_spectrograms.fullSpectrogram.Value == 1 && my_spectrogram.recalculateSpectrogram) || UI.panel.my_spectrograms.fullSpectrogram.Value == 0
                 [my_spectrogram.y, my_spectrogram.f, my_spectrogram.t] = mtcsglong(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);
                 my_spectrogram.recalculateSpectrogram = false;
             end
@@ -2406,7 +2423,7 @@ end
             text(UI.plot_spectrogram_axis,0*ones(size(y_ticks)),axis_labels,num2str(y_ticks(:)),'FontWeight', 'Bold','color',UI.settings.primaryColor,'margin',1, 'HitTest','off','HorizontalAlignment','left','BackgroundColor',[0 0 0 0.5]);
             
             
-            if UI.panel.my_spectrogram.fullSpectrogram.Value == 1
+            if UI.panel.my_spectrograms.fullSpectrogram.Value == 1
                 line(UI.plot_spectrogram_axis,[UI.t0 / UI.t_total,UI.t0 / UI.t_total],[0,1],'color','k', 'LineStyle', '--', 'HitTest','off','linewidth',2);
             end
             
@@ -2430,8 +2447,8 @@ end
             %------------------------------------------------------------------------------------%
 
             % Highlight corresponding channel
-            if ismember(UI.settings.my_spectrogram.channel,UI.channelOrder)
-                highlightTraces(UI.settings.my_spectrogram.channel,'y')
+            if ismember(UI.settings.my_spectrograms.channel,UI.channelOrder)
+                highlightTraces(UI.settings.my_spectrograms.channel,'y')
             end
         end
     end
@@ -2889,7 +2906,7 @@ end
             movegui(UI.fig_ecog_grid,'northeast'), set(UI.fig_ecog_grid,'visible','on')
             set(UI.fig_ecog_grid,'CloseRequestFcn',@close_ecog_grid);
             % 'Position',[0 0 1 1],
-            UI.ecog_grid_axis = axes('Parent', UI.fig_ecog_grid,'Units','Normalize','Clipping','off');
+            UI.ecog_grid_axis = axes('Parent', UI.fig_ecog_grid,'Units','Normalize','Clipping','off','ButtonDownFcn',@ClickEcogGrid);
             UI.ecog.sample = round(size(ephys.traces, 1) / 2);
             
             UI.panel.general.speed.Value = 3;
@@ -2912,7 +2929,18 @@ end
             UI.panel.general.speed.Value = 7;
             updateStreamSpeed(UI.panel.general.speed);
         end
+
+        if ~UI.settings.showChannelSpectrogram
+            UI.settings.my_spectrograms.highlight_channel = false;
+        end
         % TODO: see what more to clean
+    end
+
+    function close_cluster(~, ~, ~)
+        set(get(0,'CurrentFigure'),'visible','off');
+        if isfield(UI,'cluster')
+            UI = rmfield(UI, 'cluster');
+        end
     end
     
     function setStickySelection(~,~)
@@ -4096,30 +4124,24 @@ end
         UI.settings.spectrogram.show = false;
 
         % My Spectrogram
-        UI.panel.my_spectrogram.showSpectrogram.Value = 1;
-        UI.panel.my_spectrogram.spectrogramChannel.String = '1';
-        UI.panel.my_spectrogram.spectrogramWindow.String = '0.2';
-        UI.panel.my_spectrogram.freq_low.String = '10';
-        % UI.panel.my_spectrogram.freq_step_size.String = '5';
-        UI.panel.my_spectrogram.freq_high.String = '20';
+        % TODO: here
+        UI.panel.my_spectrograms.showSpectrogram.Value = 1;
+        UI.panel.my_spectrograms.showChannelSpectrogram.Value = 1;
+        UI.panel.my_spectrograms.spectrogramChannel.String = '1';
+        UI.panel.my_spectrograms.spectrogramWindow.String = '0.2';
+        UI.panel.my_spectrograms.overlap_perc.String = '80';
+        UI.panel.my_spectrograms.freq_low.String = '10';
+        UI.panel.my_spectrograms.freq_high.String = '20';
 
         toggleMySpectrogram
         plotData
 
-        UI.panel.my_spectrogram.showSpectrogram.Value = 0;
-        UI.settings.my_spectrogram.show = false;
+        UI.panel.my_spectrograms.showSpectrogram.Value = 0;
+        UI.panel.my_spectrograms.showChannelSpectrogram.Value = 0;
+        UI.settings.showMySpectrogram = false;
+        UI.settings.showChannelSpectrogram = false;
 
-        % Channel Spectrogram
-        UI.panel.channel_spectrogram.showSpectrogram.Value = 1;
-        UI.panel.channel_spectrogram.spectrogramWindow.String = '0.2';
-        UI.panel.channel_spectrogram.freq_low.String = '10';
-        UI.panel.channel_spectrogram.freq_high.String = '20';
 
-        toggleChannelSpectrogram
-        plotData
-
-        UI.panel.channel_spectrogram.showSpectrogram.Value = 0;
-        UI.settings.channel_spectrogram.show = false;
         
         % CSD
         UI.panel.csd.showCSD.Value = 1;
@@ -4734,7 +4756,7 @@ end
     function loadFullFile
         % TODO: check for channel number change
         % TODO: check when to call this
-        if UI.panel.my_spectrogram.fullSpectrogram.Value == 1 %isempty(ephys.full)
+        if UI.panel.my_spectrograms.fullSpectrogram.Value == 1 %isempty(ephys.full)
             s1 = dir(UI.data.fileName);
             s2 = dir(UI.data.fileNameLFP);
             if ~isempty(s1) && ~strcmp(UI.priority,'lfp')
@@ -4744,9 +4766,9 @@ end
             end
 
             disp('Loading New Channel');
-            ephys.full = LoadBinary(file, 'frequency', ephys.sr, 'channels', UI.settings.my_spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
+            ephys.full = LoadBinary(file, 'frequency', ephys.sr, 'channels', UI.settings.my_spectrograms.channel, 'nChannels', data.session.extracellular.nChannels);
         % TODO: check if free it or hold in memory
-        % elseif UI.panel.my_spectrogram.fullSpectrogram.Value == 0 && ~isempty(ephys.full)
+        % elseif UI.panel.my_spectrograms.fullSpectrogram.Value == 0 && ~isempty(ephys.full)
         %     ephys.full = [];
         end
 
@@ -4815,157 +4837,136 @@ end
         uiresume(UI.fig);
     end
 
-    function toggleChannelSpectrogram(~,~)
-        numeric_gt_0 = @(n) ~isempty(n) && isnumeric(n) && (n > 0); % numeric and greater than 0
-        numeric_gte_0 = @(n) ~isempty(n) && isnumeric(n) && (n >= 0); % Numeric and greater than or equal to 0
-
-        if UI.panel.channel_spectrogram.showSpectrogram.Value == 1
-
-            % Window width
-            window = str2double(UI.panel.channel_spectrogram.spectrogramWindow.String);
-            if numeric_gt_0(window) % && window<UI.settings.windowDuration %TODO: see if less than window constraint makes sense
-                UI.settings.channel_spectrogram.window = window;
-                UI.settings.channel_spectrogram.show = true;
-            else
-                UI.settings.channel_spectrogram.show = false;
-                UI.panel.channel_spectrogram.showSpectrogram.Value = 0;
-                MsgLog('The spectrogram window width is not valid',4);
-                return
-            end
-
-            % Frequency range
-            freq_low = str2double(UI.panel.channel_spectrogram.freq_low.String);
-            freq_high = str2double(UI.panel.channel_spectrogram.freq_high.String);
-            freq_range = [freq_low freq_high];
-
-            if numeric_gte_0(freq_low) && numeric_gt_0(freq_high) && freq_high > freq_low && numel(freq_range)>1 % && numeric_gt_0(freq_step_size)
-                UI.settings.channel_spectrogram.freq_low = freq_low;
-                UI.settings.channel_spectrogram.freq_high = freq_high;
-                UI.settings.channel_spectrogram.show = true;
-            else
-                UI.settings.channel_spectrogram.show = false;
-                UI.panel.channel_spectrogram.showSpectrogram.Value = 0;
-                MsgLog('The spectrogram frequency range is not valid',4);
-            end
-
-            if ~isfield(UI,'plot_channel_spectrogram_axis')
-                % 'XMinorTick','on','XLim',[0,UI.settings.windowDuration],'YLim',[0,1],'YTickLabel',[],'Clipping','off' 
-                % TODO: make variables for spectrogram size
-                UI.settings.channel_spectrogram.show = true;
-                UI.plot_channel_spectrogram_axis = axes('Position',[1 - UI.axis.size.channel_spectrogram UI.plot_axis1.Position(2) UI.axis.size.channel_spectrogram UI.plot_axis1.Position(4)], 'Parent',UI.panel.plots,'Units','Normalize','Color',UI.settings.background,'XColor',UI.settings.primaryColor, 'ButtonDownFcn',@ClickChannelSpectrogram);%,'TickLength',[0.005, 0.001], 'XLim',[0,UI.settings.windowDuration],'YLim',[0,1], 'Clipping','off');
-                UI.plot_axis1.Position = [UI.plot_axis1.Position(1) UI.plot_axis1.Position(2) UI.plot_axis1.Position(3) - UI.axis.size.channel_spectrogram UI.plot_axis1.Position(4)];
-                hold on
-                % UI.plot_spectrogram_axis.XAxis.MinorTick = 'on';
-                % UI.plot_spectrogram_axis.XAxis.MinorTickValues = 0:0.01:2;
-            end
-        else
-            if isfield(UI,'plot_channel_spectrogram_axis')
-                UI.plot_axis1.Position = [UI.plot_axis1.Position(1) UI.plot_axis1.Position(2) UI.plot_axis1.Position(3) + UI.axis.size.channel_spectrogram UI.plot_axis1.Position(4)];
-                delete(UI.plot_channel_spectrogram_axis);
-                UI = rmfield(UI,'plot_channel_spectrogram_axis');
-            end
-            UI.settings.channel_spectrogram.show = false;
-        end
-
-        initTraces
-        uiresume(UI.fig);
-    end
-
     function toggleMySpectrogram(~,~)
         numeric_gt_0 = @(n) ~isempty(n) && isnumeric(n) && (n > 0); % numeric and greater than 0
         numeric_gte_0 = @(n) ~isempty(n) && isnumeric(n) && (n >= 0); % Numeric and greater than or equal to 0
 
-        if UI.panel.my_spectrogram.showSpectrogram.Value == 1
-            UI.panel.my_spectrogram.fullSpectrogram.Enable = 'on';
-
-            % Channel to use
-            channelnumber = str2double(UI.panel.my_spectrogram.spectrogramChannel.String);
-            if numeric_gt_0(channelnumber) && channelnumber<=data.session.extracellular.nChannels
-                UI.settings.my_spectrogram.channel = channelnumber;
-                UI.settings.my_spectrogram.show = true;
-                if channelnumber ~= my_spectrogram.channel
-                    my_spectrogram.channel = channelnumber;
-                    loadFullFile
-                    my_spectrogram.recalculateWhiten = true;
-                end
-            else
-                UI.settings.my_spectrogram.show = false;
-                MsgLog('The spectrogram channel is not valid',4);
-                return
-            end
+        % TODO: recalculate can be further optimized with seeing change int MySpectrogram only
+        % TODO: better decide what happens in case of error
+        if UI.panel.my_spectrograms.showSpectrogram.Value == 1 || UI.panel.my_spectrograms.showChannelSpectrogram.Value == 1
 
             % Window width
-            window = str2double(UI.panel.my_spectrogram.spectrogramWindow.String);
+            window = str2double(UI.panel.my_spectrograms.spectrogramWindow.String);
             if numeric_gt_0(window) && window<UI.settings.windowDuration
-                UI.settings.my_spectrogram.window = window;
-                UI.settings.my_spectrogram.show = true;
+                UI.settings.my_spectrograms.window = window;
+                UI.settings.showMySpectrogram = UI.panel.my_spectrograms.showSpectrogram.Value == 1;
+                UI.settings.showChannelSpectrogram = UI.panel.my_spectrograms.showChannelSpectrogram.Value == 1;
                 my_spectrogram.recalculateSpectrogram = true;
             else
-                UI.settings.my_spectrogram.show = false;
+                UI.settings.showMySpectrogram = false;
+                UI.settings.showChannelSpectrogram = false;
                 MsgLog('The spectrogram window width is not valid',4);
                 return
             end
 
             % Overlap
-            overlap_perc = str2double(UI.panel.my_spectrogram.overlap_perc.String);
+            overlap_perc = str2double(UI.panel.my_spectrograms.overlap_perc.String);
             if numeric_gte_0(overlap_perc) && overlap_perc<=100
-                UI.settings.my_spectrogram.overlap_perc = overlap_perc;
-                UI.settings.my_spectrogram.show = true;
+                UI.settings.my_spectrograms.overlap_perc = overlap_perc;
+                UI.settings.showMySpectrogram = UI.panel.my_spectrograms.showSpectrogram.Value == 1;
+                UI.settings.showChannelSpectrogram = UI.panel.my_spectrograms.showChannelSpectrogram.Value == 1;
                 my_spectrogram.recalculateSpectrogram = true;
             else
-                UI.settings.my_spectrogram.show = false;
+                UI.settings.showMySpectrogram = false;
+                UI.settings.showChannelSpectrogram = false;
                 MsgLog('The spectrogram overlap is not a valid percentage',4);
                 return
             end
 
             % Frequency range and step size
-            freq_low = str2double(UI.panel.my_spectrogram.freq_low.String);
-            % freq_step_size = str2double(UI.panel.my_spectrogram.freq_step_size.String);
-            freq_high = str2double(UI.panel.my_spectrogram.freq_high.String);
+            freq_low = str2double(UI.panel.my_spectrograms.freq_low.String);
+            freq_high = str2double(UI.panel.my_spectrograms.freq_high.String);
             freq_range = [freq_low freq_high];
 
-            if numeric_gte_0(freq_low) && numeric_gt_0(freq_high) && freq_high > freq_low && numel(freq_range)>1
-                UI.settings.my_spectrogram.freq_low = freq_low;
-                % UI.settings.my_spectrogram.freq_step_size = freq_step_size;
-                UI.settings.my_spectrogram.freq_high = freq_high;
-                UI.settings.my_spectrogram.show = true;
+            if numeric_gte_0(freq_low) && numeric_gt_0(freq_high) && freq_high > freq_low && numel(freq_range)>1 && freq_high <= ephys.sr / 2
+                UI.settings.my_spectrograms.freq_low = freq_low;
+                UI.settings.my_spectrograms.freq_high = freq_high;
+                UI.settings.showMySpectrogram = UI.panel.my_spectrograms.showSpectrogram.Value == 1;
+                UI.settings.showChannelSpectrogram = UI.panel.my_spectrograms.showChannelSpectrogram.Value == 1;
+                my_spectrogram.recalculateSpectrogram = true;
+                
                 % Determining the optioal y-ticks
                 n_min_ticks = 5;
-                y_tick_step_options = [0.1,1,2,5,10,20,50,100,200,500];
+                tick_step_options = [0.1,1,2,5,10,20,50,100,200,500];
                 
                 axis_ticks_optimal = (freq_range(end)-freq_range(1))/n_min_ticks; 
-                y_tick_step = interp1(y_tick_step_options,y_tick_step_options,axis_ticks_optimal,'nearest');
+                tick_step = interp1(tick_step_options,tick_step_options,axis_ticks_optimal,'nearest');
                  
-                y_ticks = [y_tick_step*ceil(freq_range(1)/y_tick_step):y_tick_step:y_tick_step*floor(freq_range(end)/y_tick_step)];
-                UI.settings.my_spectrogram.y_ticks = y_ticks;
-                my_spectrogram.recalculateSpectrogram = true;
+                freq_ticks = [tick_step*ceil(freq_range(1)/tick_step):tick_step:tick_step*floor(freq_range(end)/tick_step)];
+                UI.settings.my_spectrograms.freq_ticks = freq_ticks;
             else
-                UI.settings.my_spectrogram.show = false;
-                UI.panel.my_spectrogram.showSpectrogram.Value = 0;
-                MsgLog('The spectrogram frequency range is not valid',4);
+                UI.settings.showMySpectrogram = false;
+                UI.settings.showChannelSpectrogram = false;
+                MsgLog("The spectrogram frequency range is not valid." + newline + "Maximum Freq should be half of the sample rate " + num2str(ephys.sr),4);
+                return
             end
 
-            if ~isfield(UI,'plot_spectrogram_axis')
-                % 'XMinorTick','on','XLim',[0,UI.settings.windowDuration],'YLim',[0,1],'YTickLabel',[],'Clipping','off'
-                % TODO: make variables for spectrogram size                UI.plot_spectrogram_axis = axes('Position',[0 0 UI.plot_axis1.Position(3) UI.axis.size.my_spectrogram],'Parent',UI.panel.plots,'Units','Normalize','Color',UI.settings.background,'XColor',UI.settings.primaryColor,'TickLength',[0.005, 0.001], 'XLim',[0,UI.settings.windowDuration],'YLim',[0,1],'Clipping','off','ButtonDownFcn',@ClickSpectrogram);
-                UI.plot_spectrogram_axis = axes('Position',[0 0 UI.plot_axis1.Position(3) UI.axis.size.my_spectrogram],'Parent',UI.panel.plots,'Units','Normalize','Color',UI.settings.background,'XColor',UI.settings.primaryColor,'TickLength',[0.005, 0.001], 'XLim',[0 UI.settings.windowDuration],'YLim',[0 1],'Clipping','off','ButtonDownFcn',@ClickSpectrogram);
+            if UI.panel.my_spectrograms.showSpectrogram.Value == 1
+                UI.panel.my_spectrograms.fullSpectrogram.Enable = 'on';
+    
+                % Channel to use
+                channelnumber = str2double(UI.panel.my_spectrograms.spectrogramChannel.String);
+                if numeric_gt_0(channelnumber) && channelnumber<=data.session.extracellular.nChannels
+                    UI.settings.my_spectrograms.channel = channelnumber;
+                    UI.settings.showMySpectrogram = true;
+                    if channelnumber ~= my_spectrogram.channel
+                        my_spectrogram.channel = channelnumber;
+                        loadFullFile
+                        my_spectrogram.recalculateWhiten = true;
+                    end
+                else
+                    UI.settings.showMySpectrogram = false;
+                    MsgLog('The spectrogram channel is not valid',4);
+                    return
+                end
 
-                % UI.plot_spectrogram_axis = axes('Position',[0 0 UI.plot_axis1.Position(3) UI.axis.size.my_spectrogram],'Parent',UI.panel.plots,'Units','Normalize','Color',UI.settings.background,'XColor',UI.settings.primaryColor,'TickLength',[0.005 0.001], 'XLim',[0 UI.settings.windowDuration],'YLim',[0 1],'Clipping','off','ButtonDownFcn',@ClickSpectrogram);
-                UI.plot_axis1.Position = [UI.plot_axis1.Position(1) UI.plot_axis1.Position(2) + UI.axis.size.my_spectrogram UI.plot_axis1.Position(3) UI.plot_axis1.Position(4) - UI.axis.size.my_spectrogram];
-                hold on
-                % UI.plot_spectrogram_axis.XAxis.MinorTick = 'on';
-                % UI.plot_spectrogram_axis.XAxis.MinorTickValues = 0:0.01:2;
-                ce_dragzoom([UI.plot_axis1,UI.plot_spectrogram_axis],'on');
+                if ~isfield(UI,'plot_spectrogram_axis')
+                    % 'XMinorTick','on','XLim',[0,UI.settings.windowDuration],'YLim',[0,1],'YTickLabel',[],'Clipping','off'
+                    % TODO: make variables for spectrogram size                UI.plot_spectrogram_axis = axes('Position',[0 0 UI.plot_axis1.Position(3) UI.axis.size.my_spectrogram],'Parent',UI.panel.plots,'Units','Normalize','Color',UI.settings.background,'XColor',UI.settings.primaryColor,'TickLength',[0.005, 0.001], 'XLim',[0,UI.settings.windowDuration],'YLim',[0,1],'Clipping','off','ButtonDownFcn',@ClickSpectrogram);
+                    UI.plot_spectrogram_axis = axes('Position',[0 0 1 UI.axis.size.my_spectrogram],'Parent',UI.panel.plots,'Units','Normalize','Color',UI.settings.background,'YColor',UI.settings.primaryColor,'TickLength',[0.005, 1], 'XLim',[0 UI.settings.windowDuration],'YLim',[0 1],'Clipping','off','ButtonDownFcn',@ClickSpectrogram);
+    
+                    % UI.plot_spectrogram_axis = axes('Position',[0 0 UI.plot_axis1.Position(3) UI.axis.size.my_spectrogram],'Parent',UI.panel.plots,'Units','Normalize','Color',UI.settings.background,'XColor',UI.settings.primaryColor,'TickLength',[0.005 0.001], 'XLim',[0 UI.settings.windowDuration],'YLim',[0 1],'Clipping','off','ButtonDownFcn',@ClickSpectrogram);
+                    UI.plot_axis1.Position = [UI.plot_axis1.Position(1) UI.plot_axis1.Position(2) + UI.axis.size.my_spectrogram UI.plot_axis1.Position(3) UI.plot_axis1.Position(4) - UI.axis.size.my_spectrogram];
+                    if isfield(UI,'plot_channel_spectrogram_axis')
+                        UI.plot_channel_spectrogram_axis.Position =  [UI.plot_channel_spectrogram_axis.Position(1) UI.plot_channel_spectrogram_axis.Position(2) + UI.axis.size.my_spectrogram UI.plot_channel_spectrogram_axis.Position(3) UI.plot_channel_spectrogram_axis.Position(4) - UI.axis.size.my_spectrogram];
+                    end
+                    % hold on
+                    % UI.plot_spectrogram_axis.XAxis.MinorTick = 'on';
+                    % UI.plot_spectrogram_axis.XAxis.MinorTickValues = 0:0.01:2;
+                    ce_dragzoom([UI.plot_axis1,UI.plot_spectrogram_axis],'on');
+                end
             end
-        else
+
+            if UI.panel.my_spectrograms.showChannelSpectrogram.Value == 1
+                if ~isfield(UI,'plot_channel_spectrogram_axis')
+                    UI.plot_channel_spectrogram_axis = axes('Position',[1 - UI.axis.size.channel_spectrogram UI.plot_axis1.Position(2) UI.axis.size.channel_spectrogram UI.plot_axis1.Position(4)],'Parent',UI.panel.plots,'XLim',[0 1],'Units','Normalize','Color',UI.settings.background,'XColor',UI.settings.primaryColor, 'ButtonDownFcn',@ClickChannelSpectrogram,'XTickLabel',[]);%,, 'XLim',[0,UI.settings.windowDuration],'YLim',[0,1], 'Clipping','off');
+                    UI.plot_axis1.Position = [UI.plot_axis1.Position(1) UI.plot_axis1.Position(2) UI.plot_axis1.Position(3) - UI.axis.size.channel_spectrogram UI.plot_axis1.Position(4)];
+                end
+            end
+        end
+        if UI.panel.my_spectrograms.showSpectrogram.Value == 0
             if isfield(UI,'plot_spectrogram_axis')
                 UI.plot_axis1.Position = [UI.plot_axis1.Position(1) UI.plot_axis1.Position(2) - UI.axis.size.my_spectrogram UI.plot_axis1.Position(3) UI.plot_axis1.Position(4) + UI.axis.size.my_spectrogram];
+                if isfield(UI,'plot_channel_spectrogram_axis')
+                    UI.plot_channel_spectrogram_axis.Position =  [UI.plot_channel_spectrogram_axis.Position(1) UI.plot_channel_spectrogram_axis.Position(2) - UI.axis.size.my_spectrogram UI.plot_channel_spectrogram_axis.Position(3) UI.plot_channel_spectrogram_axis.Position(4) + UI.axis.size.my_spectrogram];
+                end
                 ce_dragzoom(UI.plot_axis1,'on');
                 delete(UI.plot_spectrogram_axis);
                 UI = rmfield(UI,'plot_spectrogram_axis');
             end
-            UI.settings.my_spectrogram.show = false;
-            UI.panel.my_spectrogram.fullSpectrogram.Enable = 'off';
+            UI.settings.showMySpectrogram = false;
+            UI.panel.my_spectrograms.fullSpectrogram.Enable = 'off';
+        end
+        if UI.panel.my_spectrograms.showChannelSpectrogram.Value == 0
+            if isfield(UI,'plot_channel_spectrogram_axis')
+                UI.plot_axis1.Position = [UI.plot_axis1.Position(1) UI.plot_axis1.Position(2) UI.plot_axis1.Position(3) + UI.axis.size.channel_spectrogram UI.plot_axis1.Position(4)];
+                delete(UI.plot_channel_spectrogram_axis);
+                UI = rmfield(UI,'plot_channel_spectrogram_axis');
+            end
+            UI.settings.showChannelSpectrogram = false;
+            if ~UI.settings.showEcogGrid
+                UI.settings.my_spectrograms.highlight_channel = false;
+            end
         end
         initTraces
         uiresume(UI.fig);
@@ -5478,8 +5479,8 @@ end
         UI.table.cells.Data = {};
         UI.listbox.cellTypes.String = {''};
 
-        UI.settings.my_spectrogram.show = false;
-        UI.settings.channel_spectrogram.show = false;
+        UI.settings.showMySpectrogram = false;
+        UI.settings.showChannelSpectrogram = false;
         
         % Initialize the data
         UI.data.basepath = basepath;
@@ -5791,20 +5792,35 @@ end
     end
     
     function ClickSpectrogram(~,~)
-        if UI.panel.my_spectrogram.fullSpectrogram.Value ~= 1
-            return
-        end
+
         UI.settings.stream = false;
         um_axes = get(UI.plot_spectrogram_axis,'CurrentPoint');
-        t0_normalized = um_axes(1,1);
         
         switch get(UI.fig, 'selectiontype')
             case 'normal' % left mouse button
+                if UI.panel.my_spectrograms.fullSpectrogram.Value ~= 1
+                    return
+                end
+                t0_normalized = um_axes(1,1);
                 % t0
                 % TODO: fix this -> window size is not the same, mapping is not entirely correct
                 % UI.t0 = (UI.cluster.spectrogram.window_sample - UI.cluster.spectrogram.overlap) * (point_index - 1) / ephys.sr;  
                 UI.t0 = t0_normalized * UI.t_total;
                 uiresume(UI.fig);
+
+            case 'alt' % right mouse button
+                if ~isempty(my_spectrogram.highlighted)
+                    delete(my_spectrogram.highlighted);
+                end
+                if ~isempty(channel_spectrogram.highlighted)
+                    delete(channel_spectrogram.highlighted);
+                end
+
+                freq = um_axes(1,2);
+                my_spectrogram.highlighted = line(UI.plot_spectrogram_axis,get(UI.plot_spectrogram_axis,'XLim'),[freq,freq],'color',[.5 .5 .5], 'LineStyle', '--', 'HitTest','off','linewidth',2);
+                if UI.settings.showChannelSpectrogram
+                    channel_spectrogram.highlighted = line(UI.plot_channel_spectrogram_axis,[freq,freq],get(UI.plot_channel_spectrogram_axis,'YLim'),'color',[.5 .5 .5], 'LineStyle', '--', 'HitTest','off','linewidth',2);
+                end
             otherwise
         end
     end
@@ -5825,19 +5841,48 @@ end
     function ClickChannelSpectrogram(~,~)
         UI.settings.stream = false;
         um_axes = get(UI.plot_channel_spectrogram_axis,'CurrentPoint');
-        channel = floor(um_axes(1, 2));
-        % TODO: clean
-        % display(um_axes);
-        % display(channel);
         
         switch get(UI.fig, 'selectiontype')
             case 'normal' % left mouse button
-                if ismember(channel,UI.channelOrder)
-                    highlightTraces(channel,'y');
+                % if ismember(channel,UI.channelOrder)
+                % TODO: nan
+                channel = UI.channelOrder(floor(um_axes(1, 2)));
+                UI.panel.my_spectrograms.spectrogramChannel.String = num2str(channel);
+                UI.settings.my_spectrograms.channel = channel;
+                UI.settings.my_spectrograms.highlight_channel = true;
+                % end
+                uiresume(UI.fig);
+            case 'alt' % right mouse button
+                if ~isempty(my_spectrogram.highlighted)
+                    delete(my_spectrogram.highlighted);
                 end
-                % uiresume(UI.fig);
+                if ~isempty(channel_spectrogram.highlighted)
+                    delete(channel_spectrogram.highlighted);
+                end
+
+                freq = um_axes(1,1);
+                channel_spectrogram.highlighted = line(UI.plot_channel_spectrogram_axis,[freq,freq],get(UI.plot_channel_spectrogram_axis,'YLim'),'color',[.5 .5 .5], 'LineStyle', '--', 'HitTest','off','linewidth',2);
+                if UI.settings.showMySpectrogram
+                    my_spectrogram.highlighted = line(UI.plot_spectrogram_axis,get(UI.plot_spectrogram_axis,'XLim'),[freq,freq],'color',[.5 .5 .5], 'LineStyle', '--', 'HitTest','off','linewidth',2);
+                end
             otherwise
         end
+    end
+
+    function ClickEcogGrid(~,~)
+        UI.settings.stream = false;
+        um_axes = get(UI.ecog_grid_axis,'CurrentPoint');
+        switch get(UI.fig_ecog_grid, 'selectiontype')
+            case 'normal' % left mouse button
+                x = floor(um_axes(1, 1) -0.5);
+                y = floor(um_axes(1, 2) - 0.5);
+                channel = y * 16 + x + 1;
+                UI.panel.my_spectrograms.spectrogramChannel.String = num2str(channel);
+                UI.settings.my_spectrograms.channel = channel;
+                UI.settings.my_spectrograms.highlight_channel = true;
+            otherwise
+        end
+        uiresume(UI.fig);
     end
 
     function ClickPlot(~,~)
