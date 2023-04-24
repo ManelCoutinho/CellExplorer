@@ -103,3 +103,9 @@ If you want to contribute to this project either:
 - Create a **branch** with the format ```feature/name``` and do a pull request with the ```lmu-lab``` branch
 - Open an issue/feature request in the github repo
 - Contact me directly
+
+## Compilation   
+You have to add the following packages to compile NeuroScope2:
+- +analysis_tools
+- toolboxes/GUI Layout Toolbox 2.3.5
+- toolboxes/umap1.3.3
