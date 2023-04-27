@@ -1086,7 +1086,7 @@ end
         % 5. Image: Raw data displayed with the imagesc function
         % Only data thas is not currently displayed will be loaded.
         
-        if UI.fid.ephys == -1
+        if UI.fid.ephys == -1 && UI.fid.lfp == -1
             return 
         end
         
@@ -2538,7 +2538,7 @@ end
     end
     
     function plotRMSnoiseInset
-        if UI.fid.ephys == -1
+        if UI.fid.ephys == -1 && UI.fid.lfp == -1
             return 
         end
         
@@ -3462,7 +3462,7 @@ end
                     UI.settings.stream = false;
                 end
 
-                if ~ishandle(UI.fig) ||  UI.fid.ephys == -1
+                if ~ishandle(UI.fig) ||  (UI.fid.ephys == -1 && UI.fid.lfp == -1)
                     return
                 end
                 if UI.settings.playAudioFirst
@@ -5614,11 +5614,11 @@ end
             [~, my_spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.sr * 2000, 1);
 
         elseif ~isempty(s2)
+            UI.priority = 'lfp';
             filesize = s2.bytes;
             UI.t_total = filesize/(data.session.extracellular.nChannels*data.session.extracellular.srLfp*2);
             UI.settings.plotStyle = 4;
             UI.panel.general.plotStyle.Value = UI.settings.plotStyle;
-
 
             ephys.full = LoadBinary(UI.data.fileNameLFP, 'frequency', data.session.extracellular.srLfp, 'channels', my_spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
             % TODO: decide parameters
