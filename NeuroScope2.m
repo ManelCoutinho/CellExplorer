@@ -2282,14 +2282,16 @@ end
 	    % TODO: missing channels - always 16 - 16?
 	    % TODO: make with provided mapping - calculate on the opening
         map = NaN(1, 256);
-        map(1, UI.channelOrder) = ephys.traces(UI.ecog.sample,UI.channelOrder);
+        traces = ephys.traces(UI.ecog.sample,UI.channelOrder) / UI.settings.scalingFactor * 1000000;
+        map(1, UI.channelOrder) = traces;
         map = reshape(map, [16, 16]).';
         % TODO: maybe remove in the future
         %map = imgaussfilt(map, 1);
-        imagesc(UI.ecog_grid_axis, map,'HitTest','off');
+        imagesc(UI.ecog_grid_axis, map,'AlphaData',~isnan(map),'HitTest','off');
         % TODO: see why this has to happen
         set(UI.ecog_grid_axis, 'ButtonDownFcn',@ClickEcogGrid);
-        clim([-1 1]*prctile(abs(ephys.traces(UI.ecog.sample,:)),99));
+        clim([-1 1]*prctile(abs(traces),99));
+        colorbar(UI.ecog_grid_axis);     
 
         if UI.settings.my_spectrograms.highlight_channel
             y = floor((UI.settings.my_spectrograms.channel - 1) / 16);
@@ -2911,7 +2913,17 @@ end
             UI.menu.display.showEcogGrid.Checked = 'on';
             
             UI.fig_ecog_grid = figure('Name','ECoG Grid','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter','none','DefaultLegendInterpreter','none','MenuBar','None');
-            movegui(UI.fig_ecog_grid,'northeast'), set(UI.fig_ecog_grid,'visible','on')
+            movegui(UI.fig_ecog_grid,'northeast'), 
+
+            set(UI.fig_ecog_grid,'visible','on')
+            % setFigDockGroup(UI.fig, 'main');
+            % group = setfigdocked('GroupName','main','GridSize',[1, 2]);
+            % group = setfigdocked('GroupName','main','Figure',UI.fig, 'Figindex',1);
+            % group = setfigdocked('GroupName','main','Figure',UI.fig_ecog_grid, 'Figindex',2);
+            % group = setfigdocked('GroupName','main','Maximize',1,'GroupDocked',0);
+
+       
+            % setmydock([UI.fig UI.fig_ecog_grid], 'main');
             set(UI.fig_ecog_grid,'CloseRequestFcn',@close_ecog_grid);
             % 'Position',[0 0 1 1],
             UI.ecog_grid_axis = axes('Parent', UI.fig_ecog_grid,'Units','Normalize','Clipping','off','ButtonDownFcn',@ClickEcogGrid);
@@ -5660,16 +5672,16 @@ end
         else
             nTags = 1;
         end
-        tableHeights_ChannelTags = nTags*18+30;
+        tableHeights_ChannelTags = nTags*18+50;
         
         if isfield(data.session,'timeSeries') && ~isempty(data.session.timeSeries)
             nfiles = numel(fieldnames(data.session.timeSeries));
         else
             nfiles = 0;
         end
-        tableHeights_Timeseries3 = nfiles*18+30;
+        tableHeights_Timeseries3 = nfiles*18+50;
         
-        set(UI.panel.general.main, 'MinimumHeights',[65 65 210 tableHeights_ElectrodeGroups 35 tableHeights_ChannelTags 35 50 30 tableHeights_Timeseries3]);
+        set(UI.panel.general.main, 'MinimumHeights',[65 65 210 tableHeights_ElectrodeGroups 35 tableHeights_ChannelTags 35 100 40 tableHeights_Timeseries3]);
         UI.panel.general.main1.MinimumHeights = 670 + tableHeights_ElectrodeGroups + tableHeights_ChannelTags + tableHeights_Timeseries3;
         
         % Defining flexible panel heights for events and timeseries files
