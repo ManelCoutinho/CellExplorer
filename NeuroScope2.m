@@ -361,7 +361,7 @@ end
         UI.menu.display.showChannelNumbers = uimenu(UI.menu.display.topMenu,menuLabel,'Show channel numbers',menuSelectedFcn,@ShowChannelNumbers);  
         UI.menu.display.stickySelection = uimenu(UI.menu.display.topMenu,menuLabel,'Sticky selection of channels',menuSelectedFcn,@setStickySelection);
         UI.menu.display.showEcogGrid = uimenu(UI.menu.display.topMenu, menuLabel, 'Show ECoG Grid', menuSelectedFcn,@ShowEcogGrid);
-       
+        
         UI.menu.display.channelOrder.topMenu = uimenu(UI.menu.display.topMenu,menuLabel,'Channel order','Separator','on');
         UI.menu.display.channelOrder.option(1) = uimenu(UI.menu.display.channelOrder.topMenu,menuLabel,'Electrode groups',menuSelectedFcn,@setChannelOrder);
         UI.menu.display.channelOrder.option(2) = uimenu(UI.menu.display.channelOrder.topMenu,menuLabel,'Flipped electrode groups',menuSelectedFcn,@setChannelOrder);
@@ -547,7 +547,7 @@ end
         uicontrol('Parent',UI.panel.spikes.main,'Style', 'text', 'String', ' Sorting/Ydata: ', 'Units','normalized', 'Position', [0.0 0.51 0.4 0.16],'HorizontalAlignment','left','tooltip','Only applies to rasters shown below ephys traces');
         UI.panel.spikes.setSpikesYData = uicontrol('Parent',UI.panel.spikes.main,'Style', 'popup', 'String', {''}, 'Units','normalized', 'Position', [0.35 0.51 0.64 0.16],'HorizontalAlignment','left','Enable','off','Callback',@setSpikesYData);
 
-       	uicontrol('Parent',UI.panel.spikes.main,'Style', 'text', 'String', 'Width ', 'Units','normalized', 'Position', [0.37 0.34 0.3 0.13],'HorizontalAlignment','right','tooltip','Relative width of the spike waveforms');        
+            uicontrol('Parent',UI.panel.spikes.main,'Style', 'text', 'String', 'Width ', 'Units','normalized', 'Position', [0.37 0.34 0.3 0.13],'HorizontalAlignment','right','tooltip','Relative width of the spike waveforms');        
         UI.panel.spikes.showSpikeWaveforms = uicontrol('Parent',UI.panel.spikes.main,'Style', 'checkbox','String','Waveforms', 'value', 0, 'Units','normalized', 'Position', [0.01 0.34 0.43 0.16],'Callback',@showSpikeWaveforms,'HorizontalAlignment','left','tooltip','Show spike waveforms below ephys traces');
         UI.panel.spikes.waveformsRelativeWidth = uicontrol('Parent',UI.panel.spikes.main,'Style', 'Edit', 'String',num2str(UI.settings.waveformsRelativeWidth), 'Units','normalized', 'Position', [0.67 0.34 0.32 0.16],'HorizontalAlignment','center','Callback',@showSpikeWaveforms);
         uicontrol('Parent',UI.panel.spikes.main,'Style', 'text', 'String', 'Electrode group ', 'Units','normalized', 'Position', [0.17 0.17 0.5 0.13],'HorizontalAlignment','right','tooltip','Electrode group that the PCA representation is applied to');
@@ -926,7 +926,7 @@ end
         end
         
         if ~isempty(UI.legend)
-        	text(1/400,0.005,UI.legend,'FontWeight', 'Bold','BackgroundColor',UI.settings.textBackground,'VerticalAlignment', 'bottom','Units','normalized','HorizontalAlignment','left','HitTest','off','Interpreter','tex')
+            text(1/400,0.005,UI.legend,'FontWeight', 'Bold','BackgroundColor',UI.settings.textBackground,'VerticalAlignment', 'bottom','Units','normalized','HorizontalAlignment','left','HitTest','off','Interpreter','tex')
         end
     end
     
@@ -1634,7 +1634,7 @@ end
                     spikes_raster.y = ephys.traces(idx3)-UI.channelScaling(idx3);
                 end
             end
-             
+                
             if UI.settings.spikesGroupColors == 4
                 putativeCellTypes = unique(data.cell_metrics.(UI.params.groupMetric));
                 UI.colors_metrics = eval([UI.settings.spikesColormap,'(',num2str(numel(putativeCellTypes)),')']);
@@ -2093,7 +2093,7 @@ end
 
     function plotEventData(eventName,t1,t2,colorIn1)
         if strcmp(UI.settings.eventData,eventName)
-        	colorIn1 = UI.settings.primaryColor;
+            colorIn1 = UI.settings.primaryColor;
         end
         
         % Plot events
@@ -2286,21 +2286,28 @@ end
         map = NaN(1, data.session.extracellular.nChannels);
         traces = ephys.traces(UI.ecog.sample,UI.channelOrder) / UI.settings.scalingFactor * 1000000;
         map(1, UI.channelOrder) = traces;
-        nRows = data.session.extracellular.nElectrodeGroups;
-        nCols = numel(data.session.extracellular.electrodeGroups.channels{1});
-        map = reshape(map, [nCols, nRows]).';
+        nCols = data.session.extracellular.nElectrodeGroups;
+        nRows = numel(data.session.extracellular.electrodeGroups.channels{1});
+        map = reshape(map, [nRows,nCols]);
         % TODO: maybe remove in the future
         %map = imgaussfilt(map, 1);
         imagesc(UI.ecog_grid_axis, map,'AlphaData',~isnan(map),'HitTest','off');
         % TODO: see why this has to happen
         set(UI.ecog_grid_axis, 'ButtonDownFcn',@ClickEcogGrid);
-        clim([-1 1]*prctile(abs(traces),99));
+        set(UI.ecog_grid_axis, 'clim', [prctile(traces(:),1) prctile(traces(:),99)]);
         colorbar(UI.ecog_grid_axis);     
 
         if UI.settings.my_spectrograms.highlight_channel
-            y = floor((UI.settings.my_spectrograms.channel - 1) / nRows);
-            x = mod(UI.settings.my_spectrograms.channel - 1, nCols);
-
+            if data.session.extracellular.electrodeGroups.channels{1}(2)-data.session.extracellular.electrodeGroups.channels{1}(1) == 1
+                % Column-ordered
+                x = floor((UI.settings.my_spectrograms.channel - 1) / nRows);
+                y = mod(UI.settings.my_spectrograms.channel - 1, nRows);
+            else
+                % Row-ordered
+                x = mod(UI.settings.my_spectrograms.channel - 1, nCols);
+                y = floor((UI.settings.my_spectrograms.channel - 1) / nCols);
+            end
+            
             line(UI.ecog_grid_axis,[x+0.5,x+0.5,x+1.5,x+1.5,x+0.5],[y+0.5,y+1.5,y+1.5,y+0.5,y+0.5],'color',[0.5,0.5,0.5],'linewidth',2)
         end
     end
@@ -2336,7 +2343,7 @@ end
             
         imagesc(UI.plot_channel_spectrogram_axis,'XData', f_norm, 'YData', 1:size(UI.channelOrder, 1), 'CData', y, 'HitTest','off');
 
-        clim(UI.plot_channel_spectrogram_axis, [prctile(y(:),1) prctile(y(:),99)])
+        set(UI.plot_channel_spectrogram_axis, 'clim', [prctile(y(:),1) prctile(y(:),99)]);
         UI.plot_channel_spectrogram_axis.YDir = 'reverse';
         % display(channel([1 end]) + [-0.5 0.5]);
         % if size(UI.channelOrder, 1) <= 16
@@ -2441,7 +2448,7 @@ end
             % end
             % display([max(0, f(1)) min(f(end), 20)]);
             % clim(med + [-3 3] * dev); %ORIGINAL VERSION
-            clim(UI.plot_spectrogram_axis, [prctile(log_y(:),2) prctile(log_y(:),98)]);
+            set(UI.plot_spectrogram_axis, 'clim', [prctile(log_y(:),2) prctile(log_y(:),98)]);
 
 
             %------------VERSION by Evgeny 10.11.2016: to scale when specs have artifacts ------%
@@ -2715,7 +2722,7 @@ end
     end
     
     function exitNeuroScope2(~,~)
-    	close(UI.fig);
+        close(UI.fig);
     end
         
     function DatabaseSessionDialog(~,~)
@@ -2923,7 +2930,7 @@ end
             % group = setfigdocked('GroupName','main','Figure',UI.fig_ecog_grid, 'Figindex',2);
             % group = setfigdocked('GroupName','main','Maximize',1,'GroupDocked',0);
 
-       
+        
             % setmydock([UI.fig UI.fig_ecog_grid], 'main');
             set(UI.fig_ecog_grid,'CloseRequestFcn',@close_ecog_grid);
             % 'Position',[0 0 1 1],
@@ -3461,7 +3468,7 @@ end
             UI.buttons.play1.String = [char(9646) char(9646)];
             UI.elements.lower.performance.String = '  Streaming...';
             if UI.settings.audioPlay
-            	UI.settings.playAudioFirst = true;
+                UI.settings.playAudioFirst = true;
                 n_streaming = 0;
             else
                 UI.settings.playAudioFirst = false;
@@ -4257,7 +4264,7 @@ end
     end  
     
     function randomize_t0
-    	UI.t0 = rand(1)*(UI.t_total-UI.settings.windowDuration);
+        UI.t0 = rand(1)*(UI.t_total-UI.settings.windowDuration);
     end
     
     
@@ -4843,7 +4850,7 @@ end
                 
                 axis_ticks_optimal = (freq_range(end)-freq_range(1))/n_min_ticks; 
                 y_tick_step = interp1(y_tick_step_options,y_tick_step_options,axis_ticks_optimal,'nearest');
-                 
+                    
                 y_ticks = [y_tick_step*ceil(freq_range(1)/y_tick_step):y_tick_step:y_tick_step*floor(freq_range(end)/y_tick_step)];
                 UI.settings.spectrogram.y_ticks = y_ticks;
             else
@@ -4913,7 +4920,7 @@ end
                 
                 axis_ticks_optimal = (freq_range(end)-freq_range(1))/n_min_ticks; 
                 tick_step = interp1(tick_step_options,tick_step_options,axis_ticks_optimal,'nearest');
-                 
+                    
                 freq_ticks = [tick_step*ceil(freq_range(1)/tick_step):tick_step:tick_step*floor(freq_range(end)/tick_step)];
                 UI.settings.my_spectrograms.freq_ticks = freq_ticks;
             else
@@ -5385,7 +5392,7 @@ end
             if UI.settings.showChannelNumbers
                 electrodegroup_spacing = 0.13;
             else
-               	electrodegroup_spacing = 0.03;
+                    electrodegroup_spacing = 0.03;
             end
             UI.settings.columns = numel(UI.settings.electrodeGroupsToPlot)+numel(UI.settings.electrodeGroupsToPlot)*electrodegroup_spacing;
             for i = 1:length(UI.settings.electrodeGroupsToPlot)
@@ -5396,7 +5403,7 @@ end
         end
         
         if nChannelsToPlot == 1
-        	channelOffset = 0.5;
+            channelOffset = 0.5;
         elseif nChannelsToPlot == 0
             channelOffset = [];
         elseif UI.settings.plotTracesInColumns
@@ -5940,7 +5947,13 @@ end
             case 'normal' % left mouse button
                 x = floor(um_axes(1, 1) -0.5);
                 y = floor(um_axes(1, 2) - 0.5);
-                channel = y * data.session.extracellular.nElectrodeGroups + x + 1;
+                if data.session.extracellular.electrodeGroups.channels{1}(2)-data.session.extracellular.electrodeGroups.channels{1}(1) == 1
+                    % Column-ordered
+                    channel = y + numel(data.session.extracellular.electrodeGroups.channels{1}) * x + 1;
+                else
+                    % Row-ordered
+                    channel = y * data.session.extracellular.nElectrodeGroups + x + 1;
+                end
                 UI.panel.my_spectrograms.spectrogramChannel.String = num2str(channel);
                 UI.settings.my_spectrograms.channel = channel;
                 UI.settings.my_spectrograms.highlight_channel = true;
@@ -7683,7 +7696,7 @@ end
         
         % Adding notes
         if ~isempty(content.output2.notes) && isempty(text_string1)
-           text_string1 = [' Notes: ', content.output2.notes]; 
+            text_string1 = [' Notes: ', content.output2.notes]; 
         elseif ~isempty(content.output2.notes)
             text_string1 = [text_string1,'.   Notes: ', content.output2.notes];
         end
@@ -8005,7 +8018,7 @@ end
             case '- Documentation on session metadata'
                 web('https://cellexplorer.org/datastructure/data-structure-and-format/#session-metadata','-new','-browser')
             case 'Support'
-                 web('https://cellexplorer.org/#support','-new','-browser')
+                    web('https://cellexplorer.org/#support','-new','-browser')
             case '- Report an issue'
                 web('https://github.com/petersenpeter/CellExplorer/issues/new?assignees=&labels=bug&template=bug_report.md&title=','-new','-browser')
             case '- Submit feature request'
