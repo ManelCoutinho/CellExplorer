@@ -97,6 +97,23 @@ Menu Bar &rarr; Analysis Option &rarr; Cluster Folder &rarr;  tsne_umap
 Besides the main menu, the final plot has the regular zoom, pan and move mouse interaction.   
 In addition, you might select one of the samples to highlight, which will move the window of the ephys traces accordingly, and jump to a random nearby sample using the arrows.
 
+## Matlab datastructures
+### States
+Simple explanation of the states file, for a more detailed break down, please refer to this [page](https://cellexplorer.org/datastructure/data-structure-and-format/#states).
+
+Name format: `basename.statesName.states.mat` (you can add multiple states to the same file). It has the following struct:
+* `statesName`: same name as the random one chosen for the file with the following inside:
+	* `.ints`: a struct containing the different states (e.g. REM, RUN, SWS, ...).
+  		* `.stateName`: [Nx2] double with start/stop time for each instance of state stateName.
+		
+> **⚠ Warning:**  
+> If intervals by samples are being used, don't forget to convert it to time by divding by the sample frequency.
+
+*Example:*  
+In this case `statesName` is Test and the three defined `stateName` are REM, RUN and  SWS.   
+![StateFileExample](https://user-images.githubusercontent.com/37669762/235695157-4c028ec3-a51d-4829-81b0-e43370d29b79.png)
+
+
 
 ## Contribute
 If you want to contribute to this project either:

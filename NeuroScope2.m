@@ -834,6 +834,10 @@ end
         if UI.settings.showChannelSpectrogram && ephys.loaded
             plotChannelSpectrogram
         end
+
+        if UI.settings.my_spectrograms.highlight_channel && ephys.loaded && ismember(UI.settings.my_spectrograms.channel,UI.channelOrder)
+            highlightTraces(UI.settings.my_spectrograms.channel,'w')
+        end
         
         % Instantaneous metrics
         if UI.settings.instantaneousMetrics.show && ephys.loaded
@@ -1086,7 +1090,7 @@ end
         % 5. Image: Raw data displayed with the imagesc function
         % Only data thas is not currently displayed will be loaded.
         
-        if UI.fid.ephys == -1
+        if UI.fid.ephys == -1 && UI.fid.lfp == -1
             return 
         end
         
@@ -2278,13 +2282,13 @@ end
             delete(UI.ecog.line);
         end
         UI.ecog.line = plotLines(UI.ecog.sample/ephys.sr,[0;1],'white','--',1,true);
-        % TODO: generalize
-	    % TODO: missing channels - always 16 - 16?
-	    % TODO: make with provided mapping - calculate on the opening
-        map = NaN(1, 256);
+        
+        map = NaN(1, data.session.extracellular.nChannels);
         traces = ephys.traces(UI.ecog.sample,UI.channelOrder) / UI.settings.scalingFactor * 1000000;
         map(1, UI.channelOrder) = traces;
-        map = reshape(map, [16, 16]).';
+        nRows = data.session.extracellular.nElectrodeGroups;
+        nCols = numel(data.session.extracellular.electrodeGroups.channels{1});
+        map = reshape(map, [nCols, nRows]).';
         % TODO: maybe remove in the future
         %map = imgaussfilt(map, 1);
         imagesc(UI.ecog_grid_axis, map,'AlphaData',~isnan(map),'HitTest','off');
@@ -2294,11 +2298,10 @@ end
         colorbar(UI.ecog_grid_axis);     
 
         if UI.settings.my_spectrograms.highlight_channel
-            y = floor((UI.settings.my_spectrograms.channel - 1) / 16);
-            x = mod(UI.settings.my_spectrograms.channel - 1, 16);
+            y = floor((UI.settings.my_spectrograms.channel - 1) / nRows);
+            x = mod(UI.settings.my_spectrograms.channel - 1, nCols);
 
             line(UI.ecog_grid_axis,[x+0.5,x+0.5,x+1.5,x+1.5,x+0.5],[y+0.5,y+1.5,y+1.5,y+0.5,y+0.5],'color',[0.5,0.5,0.5],'linewidth',2)
-
         end
     end
 
@@ -2350,10 +2353,6 @@ end
         axis_labels = interp1(f,f_norm,y_ticks);
         prov = get(UI.plot_channel_spectrogram_axis,'ylim');
         text(UI.plot_channel_spectrogram_axis,axis_labels, (prov(2)-3)*ones(size(y_ticks)),num2str(y_ticks(:)),'FontWeight', 'Bold','color',UI.settings.primaryColor,'margin',1, 'HitTest','off','HorizontalAlignment','left','BackgroundColor',[0 0 0 0.5]);
-        
-        if UI.settings.my_spectrograms.highlight_channel && ismember(UI.settings.my_spectrograms.channel,UI.channelOrder)
-            highlightTraces(UI.settings.my_spectrograms.channel,'y')
-        end
     end
 
     function plotMySpectrogram
@@ -2451,11 +2450,6 @@ end
             % caxis([-5 0.5*max(a(:)) ]);
             % clear a
             %------------------------------------------------------------------------------------%
-
-            % Highlight corresponding channel
-            if ismember(UI.settings.my_spectrograms.channel,UI.channelOrder)
-                highlightTraces(UI.settings.my_spectrograms.channel,'y')
-            end
         end
     end
     
@@ -2540,7 +2534,7 @@ end
     end
     
     function plotRMSnoiseInset
-        if UI.fid.ephys == -1
+        if UI.fid.ephys == -1 && UI.fid.lfp == -1
             return 
         end
         
@@ -2910,6 +2904,13 @@ end
     function ShowEcogGrid(~,~)
         UI.settings.showEcogGrid = ~UI.settings.showEcogGrid;
         if UI.settings.showEcogGrid
+            % All the columns same size
+            if ~all(cellfun(@numel, data.session.extracellular.electrodeGroups.channels) == numel(data.session.extracellular.electrodeGroups.channels{1}))
+                UI.settings.showEcogGrid = false;
+                MsgLog('ECoG grid not possible: channel groups with different sizes',4);
+                return
+            end
+
             UI.menu.display.showEcogGrid.Checked = 'on';
             
             UI.fig_ecog_grid = figure('Name','ECoG Grid','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter','none','DefaultLegendInterpreter','none','MenuBar','None');
@@ -2950,7 +2951,7 @@ end
             updateStreamSpeed(UI.panel.general.speed);
         end
 
-        if ~UI.settings.showChannelSpectrogram
+        if ~UI.settings.showMySpectrogram
             UI.settings.my_spectrograms.highlight_channel = false;
         end
         % TODO: see what more to clean
@@ -3474,7 +3475,7 @@ end
                     UI.settings.stream = false;
                 end
 
-                if ~ishandle(UI.fig) ||  UI.fid.ephys == -1
+                if ~ishandle(UI.fig) ||  (UI.fid.ephys == -1 && UI.fid.lfp == -1)
                     return
                 end
                 if UI.settings.playAudioFirst
@@ -4857,6 +4858,7 @@ end
         uiresume(UI.fig);
     end
 
+    % TODO: optimize with what triggered changed
     function toggleMySpectrogram(~,~)
         numeric_gt_0 = @(n) ~isempty(n) && isnumeric(n) && (n > 0); % numeric and greater than 0
         numeric_gte_0 = @(n) ~isempty(n) && isnumeric(n) && (n >= 0); % Numeric and greater than or equal to 0
@@ -4955,6 +4957,7 @@ end
                     % UI.plot_spectrogram_axis.XAxis.MinorTickValues = 0:0.01:2;
                     ce_dragzoom([UI.plot_axis1,UI.plot_spectrogram_axis],'on');
                 end
+                UI.settings.my_spectrograms.highlight_channel = true;
             end
 
             if UI.panel.my_spectrograms.showChannelSpectrogram.Value == 1
@@ -4976,6 +4979,9 @@ end
             end
             UI.settings.showMySpectrogram = false;
             UI.panel.my_spectrograms.fullSpectrogram.Enable = 'off';
+            if ~UI.settings.showEcogGrid
+                UI.settings.my_spectrograms.highlight_channel = false;
+            end
         end
         if UI.panel.my_spectrograms.showChannelSpectrogram.Value == 0
             if isfield(UI,'plot_channel_spectrogram_axis')
@@ -4984,7 +4990,7 @@ end
                 UI = rmfield(UI,'plot_channel_spectrogram_axis');
             end
             UI.settings.showChannelSpectrogram = false;
-            if ~UI.settings.showEcogGrid
+            if ~UI.settings.showEcogGrid && ~UI.settings.showMySpectrogram
                 UI.settings.my_spectrograms.highlight_channel = false;
             end
         end
@@ -5626,11 +5632,11 @@ end
             [~, my_spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.sr * 2000, 1);
 
         elseif ~isempty(s2)
+            UI.priority = 'lfp';
             filesize = s2.bytes;
             UI.t_total = filesize/(data.session.extracellular.nChannels*data.session.extracellular.srLfp*2);
             UI.settings.plotStyle = 4;
             UI.panel.general.plotStyle.Value = UI.settings.plotStyle;
-
 
             ephys.full = LoadBinary(UI.data.fileNameLFP, 'frequency', data.session.extracellular.srLfp, 'channels', my_spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
             % TODO: decide parameters
@@ -5934,7 +5940,7 @@ end
             case 'normal' % left mouse button
                 x = floor(um_axes(1, 1) -0.5);
                 y = floor(um_axes(1, 2) - 0.5);
-                channel = y * 16 + x + 1;
+                channel = y * data.session.extracellular.nElectrodeGroups + x + 1;
                 UI.panel.my_spectrograms.spectrogramChannel.String = num2str(channel);
                 UI.settings.my_spectrograms.channel = channel;
                 UI.settings.my_spectrograms.highlight_channel = true;
