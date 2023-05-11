@@ -139,6 +139,10 @@ preferences.my_spectrograms.overlap_perc = 80;
 preferences.my_spectrograms.freq_low = 1;
 preferences.my_spectrograms.freq_high = 60;
 
+% ECoG Grid
+preferences.ecog_grid.min = -400;
+preferences.ecog_grid.max = 400;
+
 % CSD
 preferences.CSD.show = false;
 

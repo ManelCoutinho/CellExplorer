@@ -2294,7 +2294,11 @@ end
         imagesc(UI.ecog_grid_axis, map,'AlphaData',~isnan(map),'HitTest','off');
         % TODO: see why this has to happen
         set(UI.ecog_grid_axis, 'ButtonDownFcn',@ClickEcogGrid);
-        set(UI.ecog_grid_axis, 'clim', [prctile(traces(:),1) prctile(traces(:),99)]);
+        if UI.ecog.fixLimits.Value == 0
+            set(UI.ecog_grid_axis, 'clim', [prctile(traces(:),1) prctile(traces(:),99)]);
+        else
+            set(UI.ecog_grid_axis, 'clim', [UI.settings.ecog_grid.min UI.settings.ecog_grid.max]);
+        end
         colorbar(UI.ecog_grid_axis);     
 
         if UI.settings.my_spectrograms.highlight_channel
@@ -2921,20 +2925,24 @@ end
             UI.menu.display.showEcogGrid.Checked = 'on';
             
             UI.fig_ecog_grid = figure('Name','ECoG Grid','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter','none','DefaultLegendInterpreter','none','MenuBar','None');
-            movegui(UI.fig_ecog_grid,'northeast'), 
+            movegui(UI.fig_ecog_grid,'northeast'), set(UI.fig_ecog_grid,'visible','on')
 
-            set(UI.fig_ecog_grid,'visible','on')
+            UI.ecog_grid_axis = axes('Parent', UI.fig_ecog_grid,'Units','Normalize','Position',[0.07 0.23 0.87 0.75],'Clipping','off','ButtonDownFcn',@ClickEcogGrid);
+                
+            UI.ecog.fixLimits = uicontrol('Parent',UI.fig_ecog_grid,'Style','checkbox','String','Fixed Limits','value',0,'Units','normalized','Position',[0.05 0.06 0.18 0.04],'HorizontalAlignment','left','Callback',@setEcogLimits);
+            uicontrol('Parent',UI.fig_ecog_grid,'Style','text','String','Min:','Units','normalized','Position',[0.25 0.06 0.05 0.04],'HorizontalAlignment','left');
+            UI.ecog.min = uicontrol('Parent',UI.fig_ecog_grid,'Style','Edit','String',num2str(UI.settings.ecog_grid.min),'Units','normalized','Position',[0.32 0.05 0.21 0.06],'Enable','off','HorizontalAlignment','center','Callback',@setEcogLimits);
+            
+            uicontrol('Parent',UI.fig_ecog_grid,'Style','text','String','Max:','Units','normalized','Position',[0.55 0.06 0.06 0.04],'HorizontalAlignment','left');
+            UI.ecog.max = uicontrol('Parent',UI.fig_ecog_grid,'Style','Edit','String',num2str(UI.settings.ecog_grid.max),'Units','normalized','Position',[0.62 0.05 0.21 0.06],'Enable','off','HorizontalAlignment','center','Callback',@setEcogLimits);
             % setFigDockGroup(UI.fig, 'main');
             % group = setfigdocked('GroupName','main','GridSize',[1, 2]);
             % group = setfigdocked('GroupName','main','Figure',UI.fig, 'Figindex',1);
             % group = setfigdocked('GroupName','main','Figure',UI.fig_ecog_grid, 'Figindex',2);
             % group = setfigdocked('GroupName','main','Maximize',1,'GroupDocked',0);
-
         
             % setmydock([UI.fig UI.fig_ecog_grid], 'main');
             set(UI.fig_ecog_grid,'CloseRequestFcn',@close_ecog_grid);
-            % 'Position',[0 0 1 1],
-            UI.ecog_grid_axis = axes('Parent', UI.fig_ecog_grid,'Units','Normalize','Clipping','off','ButtonDownFcn',@ClickEcogGrid);
             UI.ecog.sample = round(size(ephys.traces, 1) / 2);
             
             UI.panel.general.speed.Value = 3;
@@ -2943,6 +2951,30 @@ end
         else
             close_ecog_grid(UI.fig_ecog_grid);
         end
+    end
+
+    function setEcogLimits(~,~)
+        if UI.ecog.fixLimits.Value == 1
+            limit_min = str2double(UI.ecog.min.String);
+            limit_max = str2double(UI.ecog.max.String);
+
+            if ~isempty(limit_min) && isnumeric(limit_min) && ~isempty(limit_max) && isnumeric(limit_max) && limit_min<limit_max
+                UI.settings.ecog_grid.min = limit_min;
+                UI.settings.ecog_grid.max = limit_max;
+            else
+                UI.ecog.min.String = num2str(UI.settings.ecog_grid.min);
+                UI.ecog.max.String = num2str(UI.settings.ecog_grid.max);
+                MsgLog('Upper limit should be a number greater than lower limit',4);
+                return
+            end
+
+            UI.ecog.min.Enable = 'on';
+            UI.ecog.max.Enable = 'on';
+        else
+            UI.ecog.min.Enable = 'off';
+            UI.ecog.max.Enable = 'off';
+        end
+        plotEcogGrid;
     end
 
     function close_ecog_grid(hObject, ~, ~)

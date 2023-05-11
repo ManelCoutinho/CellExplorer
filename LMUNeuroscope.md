@@ -130,8 +130,8 @@ You have to add the following packages to compile NeuroScope2:
 ## Improvements
 - [x] Add Scale to ECoG
 - [x] NaN ECoG
-- [ ] ECoG Limits
-- [ ] Different sizes ECoG (16x16, 32x32, 32x8)
+- [x] ECoG Limits
+- [x] Different sizes ECoG (16x16, 32x32, 32x8)
 - [ ] NaN channel spectrogram
 - [ ] Fix Zoom-reset decoupled spectrogram
 - [ ] Saving optimization decoupled spectrogram
