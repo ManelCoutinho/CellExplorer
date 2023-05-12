@@ -2356,7 +2356,7 @@ end
         %     chanticks = [1:2:size(UI.channelOrder, 1)];
         % end
         [minY, maxY] = bounds(UI.channelOrder);
-        set(UI.plot_channel_spectrogram_axis,'ylim', [minY+0.5 maxY-0.5] );%, 'ytick', chanticks,'yticklabel', []);
+        set(UI.plot_channel_spectrogram_axis,'ylim', [minY-0.5 maxY+0.5] );%, 'ytick', chanticks,'yticklabel', []);
         % ftick = FreqRange(1) : 5 : FreqRange(2);
         % set(UI.plot_channel_spectrogram_axis,'xlim', FreqRange);% ,'xtick', ftick,'xticklabel', ftick)
         % set(UI.plot_channel_spectrogram_axis,'ylim', chanlim, 'ytick', chanticks, 'yticklabel', [])
@@ -2935,13 +2935,6 @@ end
             
             uicontrol('Parent',UI.fig_ecog_grid,'Style','text','String','Max:','Units','normalized','Position',[0.55 0.06 0.06 0.04],'HorizontalAlignment','left');
             UI.ecog.max = uicontrol('Parent',UI.fig_ecog_grid,'Style','Edit','String',num2str(UI.settings.ecog_grid.max),'Units','normalized','Position',[0.62 0.05 0.21 0.06],'Enable','off','HorizontalAlignment','center','Callback',@setEcogLimits);
-            % setFigDockGroup(UI.fig, 'main');
-            % group = setfigdocked('GroupName','main','GridSize',[1, 2]);
-            % group = setfigdocked('GroupName','main','Figure',UI.fig, 'Figindex',1);
-            % group = setfigdocked('GroupName','main','Figure',UI.fig_ecog_grid, 'Figindex',2);
-            % group = setfigdocked('GroupName','main','Maximize',1,'GroupDocked',0);
-        
-            % setmydock([UI.fig UI.fig_ecog_grid], 'main');
             set(UI.fig_ecog_grid,'CloseRequestFcn',@close_ecog_grid);
             UI.ecog.sample = round(size(ephys.traces, 1) / 2);
             
