@@ -60,16 +60,15 @@ channel_spectrogram.highlighted = [];
 if isdeployed % Check for if NeuroScope2 is running as a deployed app (compiled .exe or .app for windows and mac respectively)
     if ~isempty(varargin) % If a file name is provided it will load it.
         [basepath,basename,ext] = fileparts(varargin{1});
-        if isequal(basepath,0)
-            UI.priority = ext;
-            return
+        if isempty(basepath) || strcmp(basepath, '.')
+            basepath = pwd;
         end
+        UI.priority = ext;
     else % Otherwise a file load dialog will be shown
         [file1,basepath] = uigetfile('*.mat;*.dat;*.lfp;*.xml','Please select a file with the basename in it from the basepath');
         if ~isequal(file1,0)
-            temp1 = strsplit(file1,'.');
-            basename = temp1{1};
-            UI.priority = temp1{2};
+            [~,basename,ext] = fileparts(file1);
+            UI.priority = ext;
         else
             return
         end
