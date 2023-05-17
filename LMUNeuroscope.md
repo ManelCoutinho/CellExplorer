@@ -132,10 +132,14 @@ You have to add the following packages to compile NeuroScope2:
 - [x] NaN ECoG
 - [x] ECoG Limits
 - [x] Different sizes ECoG (16x16, 32x32, 32x8)
+- [ ] ECoG Grid Smoothing
+- [ ] Sparsify - drop every X channel
+- [ ] NW - add tape to spectrogram parameters
 - [ ] NaN channel spectrogram
 - [ ] Fix Zoom-reset decoupled spectrogram
 - [ ] Saving optimization decoupled spectrogram
 - [ ] ECoG grid in tab
 - [ ] ECoG grid in different tabs for different freq range
 - [ ] ECoG grid by spect freq instead of sample
-- [ ] Save ECoG grid video
+- [x] Save ECoG grid video
+- [ ] Saving ECoG limits selection with mouse

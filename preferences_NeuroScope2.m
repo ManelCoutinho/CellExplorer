@@ -142,6 +142,9 @@ preferences.my_spectrograms.freq_high = 60;
 % ECoG Grid
 preferences.ecog_grid.min = -400;
 preferences.ecog_grid.max = 400;
+preferences.ecog_grid.frame_rate = 10;
+preferences.ecog_grid.sample_step = 1;
+preferences.ecog_grid.sample_start = 1;
 
 % CSD
 preferences.CSD.show = false;

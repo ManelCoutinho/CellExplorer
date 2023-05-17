@@ -194,8 +194,11 @@ if status ~= 0,
 	error('Could not start reading (possible reasons include trying to read past the end of the file).');
 end
 
-if isinf(nSamplesPerChannel) || nSamplesPerChannel > maxNSamplesPerChannel,
+if isinf(nSamplesPerChannel) || nSamplesPerChannel > maxNSamplesPerChannel
 	nSamplesPerChannel = maxNSamplesPerChannel;
+end
+if nSamplesPerChannel + dataOffset > maxNSamplesPerChannel
+	nSamplesPerChannel = maxNSamplesPerChannel - dataOffset;
 end
 
 if downsamplefactor>1

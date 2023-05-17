@@ -2276,29 +2276,32 @@ end
         end
     end
 
+    function sampleEcogGrid(axis, data_sample)
+        map = NaN(1, data.session.extracellular.nChannels);
+        map(1, UI.channelOrder) = data_sample;
+        nCols = data.session.extracellular.nElectrodeGroups;
+        nRows = numel(data.session.extracellular.electrodeGroups.channels{1});
+        map = reshape(map, [nRows,nCols]);
+        % TODO: maybe remove in the future
+        %map = imgaussfilt(map, 1);
+        imagesc(axis, map,'AlphaData',~isnan(map),'HitTest','off');
+        % TODO: see why this has to happen
+        set(axis, 'ButtonDownFcn',@ClickEcogGrid);
+        if UI.ecog.fixLimits.Value == 0
+            set(axis, 'clim', [prctile(data_sample(:),1) prctile(data_sample(:),99)]);
+        else
+            set(axis, 'clim', [UI.settings.ecog_grid.min UI.settings.ecog_grid.max]);
+        end
+        colorbar(axis);  
+    end
+
     function plotEcogGrid
         if isfield(UI.ecog,'line') && ~isempty(UI.ecog.line)
             delete(UI.ecog.line);
         end
         UI.ecog.line = plotLines(UI.ecog.sample/ephys.sr,[0;1],'white','--',1,true);
         
-        map = NaN(1, data.session.extracellular.nChannels);
-        traces = ephys.traces(UI.ecog.sample,UI.channelOrder) / UI.settings.scalingFactor * 1000000;
-        map(1, UI.channelOrder) = traces;
-        nCols = data.session.extracellular.nElectrodeGroups;
-        nRows = numel(data.session.extracellular.electrodeGroups.channels{1});
-        map = reshape(map, [nRows,nCols]);
-        % TODO: maybe remove in the future
-        %map = imgaussfilt(map, 1);
-        imagesc(UI.ecog_grid_axis, map,'AlphaData',~isnan(map),'HitTest','off');
-        % TODO: see why this has to happen
-        set(UI.ecog_grid_axis, 'ButtonDownFcn',@ClickEcogGrid);
-        if UI.ecog.fixLimits.Value == 0
-            set(UI.ecog_grid_axis, 'clim', [prctile(traces(:),1) prctile(traces(:),99)]);
-        else
-            set(UI.ecog_grid_axis, 'clim', [UI.settings.ecog_grid.min UI.settings.ecog_grid.max]);
-        end
-        colorbar(UI.ecog_grid_axis);     
+        sampleEcogGrid(UI.ecog_grid_axis, ephys.traces(UI.ecog.sample,UI.channelOrder) / UI.settings.scalingFactor * 1000000);
 
         if UI.settings.my_spectrograms.highlight_channel
             if data.session.extracellular.electrodeGroups.channels{1}(2)-data.session.extracellular.electrodeGroups.channels{1}(1) == 1
@@ -2923,17 +2926,34 @@ end
 
             UI.menu.display.showEcogGrid.Checked = 'on';
             
-            UI.fig_ecog_grid = figure('Name','ECoG Grid','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter','none','DefaultLegendInterpreter','none','MenuBar','None');
+            UI.fig_ecog_grid = figure('Name','ECoG Grid','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter','none','DefaultLegendInterpreter','none','MenuBar','None','Position',[0, 0, 450, 560]);
             movegui(UI.fig_ecog_grid,'northeast'), set(UI.fig_ecog_grid,'visible','on')
 
-            UI.ecog_grid_axis = axes('Parent', UI.fig_ecog_grid,'Units','Normalize','Position',[0.07 0.23 0.87 0.75],'Clipping','off','ButtonDownFcn',@ClickEcogGrid);
-                
-            UI.ecog.fixLimits = uicontrol('Parent',UI.fig_ecog_grid,'Style','checkbox','String','Fixed Limits','value',0,'Units','normalized','Position',[0.05 0.06 0.18 0.04],'HorizontalAlignment','left','Callback',@setEcogLimits);
-            uicontrol('Parent',UI.fig_ecog_grid,'Style','text','String','Min:','Units','normalized','Position',[0.25 0.06 0.05 0.04],'HorizontalAlignment','left');
-            UI.ecog.min = uicontrol('Parent',UI.fig_ecog_grid,'Style','Edit','String',num2str(UI.settings.ecog_grid.min),'Units','normalized','Position',[0.32 0.05 0.21 0.06],'Enable','off','HorizontalAlignment','center','Callback',@setEcogLimits);
+            UI.ecog_grid_axis = axes('Parent', UI.fig_ecog_grid,'OuterPosition',[0.05 0.3 0.90 0.69],'Clipping','off','ButtonDownFcn',@ClickEcogGrid);
             
-            uicontrol('Parent',UI.fig_ecog_grid,'Style','text','String','Max:','Units','normalized','Position',[0.55 0.06 0.06 0.04],'HorizontalAlignment','left');
-            UI.ecog.max = uicontrol('Parent',UI.fig_ecog_grid,'Style','Edit','String',num2str(UI.settings.ecog_grid.max),'Units','normalized','Position',[0.62 0.05 0.21 0.06],'Enable','off','HorizontalAlignment','center','Callback',@setEcogLimits);
+            % Limits
+            UI.ecog.fixLimits = uicontrol('Parent',UI.fig_ecog_grid,'Style','checkbox','String','Fixed Limits','value',0,'Units','normalized','Position',[0.05 0.24 0.20 0.04],'HorizontalAlignment','left','Callback',@setEcogLimits);
+            uicontrol('Parent',UI.fig_ecog_grid,'Style','text','String','Min:','Units','normalized','Position',[0.29 0.235 0.07 0.04],'HorizontalAlignment','left');
+            UI.ecog.min = uicontrol('Parent',UI.fig_ecog_grid,'Style','Edit','String',num2str(UI.settings.ecog_grid.min),'Units','normalized','Position',[0.37 0.24 0.20 0.04],'Enable','off','HorizontalAlignment','center','Callback',@setEcogLimits);
+            uicontrol('Parent',UI.fig_ecog_grid,'Style','text','String','Max:','Units','normalized','Position',[0.60 0.235 0.07 0.04],'HorizontalAlignment','left');
+            UI.ecog.max = uicontrol('Parent',UI.fig_ecog_grid,'Style','Edit','String',num2str(UI.settings.ecog_grid.max),'Units','normalized','Position',[0.68 0.24 0.20 0.04],'Enable','off','HorizontalAlignment','center','Callback',@setEcogLimits);
+
+            % Save
+            UI.ecog.save_menu = uipanel('Parent',UI.fig_ecog_grid,'title','Export','Units','normalized','Position',[0.04 0.01 0.86 0.23]);
+            uicontrol('Parent',UI.ecog.save_menu,'Style','text','String','Start:','Units','normalized','Position',[0.02 0.75 0.1 0.19],'HorizontalAlignment','left');
+            UI.ecog.sample_start = uicontrol('Parent',UI.ecog.save_menu,'Style','Edit','String',num2str(UI.settings.ecog_grid.sample_start),'Units','normalized','Position',[0.13 0.75 0.36 0.19],'HorizontalAlignment','center','Callback',@saveEcogGrid);
+            
+            uicontrol('Parent',UI.ecog.save_menu,'Style','text','String','End:','Units','normalized','Position',[0.52 0.75 0.1 0.19],'HorizontalAlignment','left');
+            UI.ecog.sample_end = uicontrol('Parent',UI.ecog.save_menu,'Style','Edit','String',num2str(UI.settings.ecog_grid.sample_end),'Units','normalized','Position',[0.63 0.75 0.36 0.19],'HorizontalAlignment','center','Callback',@saveEcogGrid);
+            
+            uicontrol('Parent',UI.ecog.save_menu,'Style','text','String','Frame Rate:','Units','normalized','Position',[0.02 0.45 0.21 0.19],'HorizontalAlignment','left');
+            UI.ecog.frame_rate = uicontrol('Parent',UI.ecog.save_menu,'Style','Edit','String',num2str(UI.settings.ecog_grid.frame_rate),'Units','normalized','Position',[0.25 0.45 0.3 0.19],'HorizontalAlignment','center','Callback',@saveEcogGrid);
+            
+            uicontrol('Parent',UI.ecog.save_menu,'Style','text','String','Sample Step:','Units','normalized','Position',[0.02 0.15 0.21 0.19],'HorizontalAlignment','left');
+            %tooltip','Stream from current timepoint
+            UI.ecog.sample_step = uicontrol('Parent',UI.ecog.save_menu,'Style','Edit','String',num2str(UI.settings.ecog_grid.sample_step),'Units','normalized','Position',[0.25 0.15 0.3 0.19],'HorizontalAlignment','center','Callback',@saveEcogGrid);
+            uicontrol('Parent',UI.ecog.save_menu,'Style','pushbutton','Units','normalized','Position',[0.68 0.05 0.29 0.29],'String','Save','Callback',@saveEcogGrid);
+
             set(UI.fig_ecog_grid,'CloseRequestFcn',@close_ecog_grid);
             UI.ecog.sample = round(size(ephys.traces, 1) / 2);
             
@@ -2967,6 +2987,89 @@ end
             UI.ecog.max.Enable = 'off';
         end
         plotEcogGrid;
+    end
+
+    function saveEcogGrid(src,~)
+        numeric_gt_0 = @(n) ~isempty(n) && isnumeric(n) && (n > 0); 
+        
+        if strcmp(src.Style, 'pushbutton')
+
+            set(findall(UI.ecog.save_menu, '-property', 'enable'), 'enable', 'off');
+
+            prov_grid = figure('Name','ECoG Grid','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter','none','DefaultLegendInterpreter','none','MenuBar','None','Position',[0, 0, 450, 450]);
+            prov_axis = axes('Parent', prov_grid,'OuterPosition',[0.05 0.05 0.90 0.9],'Clipping','off');
+
+            s1 = dir(UI.data.fileName);
+            s2 = dir(UI.data.fileNameLFP);
+            if ~isempty(s1) && ~strcmp(UI.priority,'lfp')
+                file = UI.data.fileName;
+            elseif ~isempty(s2)
+                file = UI.data.fileNameLFP;
+            end
+
+            % TODO: loop to do this by chunks -> memory issues?
+            % TODO: data processing
+            save_waitbar = waitbar(0,'Loading data');
+
+            traces = LoadBinary(file,'frequency',ephys.sr,'nChannels',data.session.extracellular.nChannels,...
+                            'offset', UI.settings.ecog_grid.sample_start-1,...
+                            'samples', UI.settings.ecog_grid.sample_end-UI.settings.ecog_grid.sample_start,...
+                            'downsample',UI.settings.ecog_grid.sample_step);
+            
+            folder = 'data/ecog_videos';
+            if ~exist(folder, 'dir')
+				mkdir(folder);
+			end
+            name = sprintf('%s/ecog-%s_t-%d-%d.avi',folder, UI.data.basename, UI.settings.ecog_grid.sample_start, UI.settings.ecog_grid.sample_end);
+            writerObj = VideoWriter(name);
+            writerObj.FrameRate = UI.settings.ecog_grid.frame_rate;
+            open(writerObj);
+            
+            waitbar(0, save_waitbar,'Saving Video...');
+            samples = size(traces, 1);
+            for i=1:samples
+                if mod(i, 10) == 0
+                    waitbar(i/samples, save_waitbar,'Saving Video...');
+                end
+                sampleEcogGrid(prov_axis, traces(i,:));
+                writeVideo(writerObj, getframe(prov_grid));
+            end
+            waitbar(1, save_waitbar,'Video Saved');
+            % close the writer object
+            close(writerObj);
+            close(save_waitbar);
+            set(findall(UI.ecog.save_menu, '-property', 'enable'), 'enable', 'on');
+        else
+            sample_start = str2double(UI.ecog.sample_start.String);
+            sample_end = str2double(UI.ecog.sample_end.String);
+            if numeric_gt_0(sample_start) && numeric_gt_0(sample_end) && sample_start < sample_end && data.session.extracellular.nSamples >= sample_end
+                UI.settings.ecog_grid.sample_start = sample_start;
+                UI.settings.ecog_grid.sample_end = sample_end;
+            else
+                UI.ecog.sample_start.String = num2str(UI.settings.ecog_grid.sample_start);
+                UI.ecog.sample_end.String = num2str(UI.settings.ecog_grid.sample_end);
+                MsgLog("Sample limits range is not valid." + newline + "Maximum Sample index " + num2str(data.session.extracellular.nSamples),4);
+                return
+            end
+
+            frame_rate = str2double(UI.ecog.frame_rate.String);
+            if numeric_gt_0(frame_rate)
+                UI.settings.ecog_grid.frame_rate = frame_rate;
+            else
+                UI.ecog.frame_rate.String = num2str(UI.settings.ecog_grid.frame_rate);
+                MsgLog('Frame Rate should be bigger than 0',4);
+                return
+            end
+
+            sample_step = str2double(UI.ecog.sample_step.String);
+            if numeric_gt_0(sample_step)
+                UI.settings.ecog_grid.sample_step = sample_step;
+            else
+                UI.ecog.sample_step.String = num2str(UI.settings.ecog_grid.sample_step);
+                MsgLog('Sample step should be bigger than 0',4);
+                return
+            end
+        end
     end
 
     function close_ecog_grid(hObject, ~, ~)
@@ -5561,7 +5664,8 @@ end
         end
         UI.t1 = UI.t0;
         UI.t0_track = UI.t0;
-        
+        UI.settings.ecog_grid.sample_end = data.session.extracellular.nSamples;
+
         % UI.settings.colormap
         try
             if data.session.extracellular.nElectrodeGroups == size(data.session.neuroScope2.colors,1)
