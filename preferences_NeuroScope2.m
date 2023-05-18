@@ -138,6 +138,7 @@ preferences.my_spectrograms.window = 0.2;
 preferences.my_spectrograms.overlap_perc = 80;
 preferences.my_spectrograms.freq_low = 1;
 preferences.my_spectrograms.freq_high = 60;
+preferences.my_spectrograms.timeband = 2;
 
 % ECoG Grid
 preferences.ecog_grid.min = -400;

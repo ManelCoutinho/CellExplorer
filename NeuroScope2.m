@@ -665,26 +665,29 @@ end
 
         % Improved Spectrograms
         UI.panel.my_spectrograms.main = uipanel('Parent',UI.panel.analysis.main,'title','Improved Spectrograms');
-        UI.panel.my_spectrograms.showChannelSpectrogram = uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'checkbox','String','Show channel spectrogram', 'value', 0, 'Units','normalized', 'Position', [0.01 0.89 0.99 0.11],'Callback',@toggleMySpectrogram,'HorizontalAlignment','left');
-        UI.panel.my_spectrograms.showSpectrogram = uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'checkbox','String','Show spectrogram', 'value', 0, 'Units','normalized', 'Position', [0.01 0.78 0.99 0.11],'Callback',@toggleMySpectrogram,'HorizontalAlignment','left');
-        uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'text','String','└─', 'Units','normalized','Position',[0.01 0.68 0.09 0.10], 'HorizontalAlignment','left');
-        UI.panel.my_spectrograms.fullSpectrogram = uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'checkbox','String','Decouple', 'value', 0, 'Units','normalized', 'Position', [0.10 0.68 0.99 0.10],'Enable', 'off','Callback',@toggleMySpectrogram, 'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.showChannelSpectrogram = uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'checkbox','String','Show channel spectrogram', 'value', 0, 'Units','normalized', 'Position', [0.01 0.89 0.99 0.09],'Callback',@toggleMySpectrogram,'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.showSpectrogram = uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'checkbox','String','Show spectrogram', 'value', 0, 'Units','normalized', 'Position', [0.01 0.80 0.99 0.09],'Callback',@toggleMySpectrogram,'HorizontalAlignment','left');
+        uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'text','String','└─', 'Units','normalized','Position',[0.01 0.7 0.09 0.09], 'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.fullSpectrogram = uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'checkbox','String','Decouple', 'value', 0, 'Units','normalized', 'Position', [0.10 0.7 0.99 0.09],'Enable', 'off','Callback',@toggleMySpectrogram, 'HorizontalAlignment','left');
         
-        uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'text','String','        Channel','Units','normalized','Position',[0.01 0.57 0.49 0.10],'HorizontalAlignment','left');
-        UI.panel.my_spectrograms.spectrogramChannel = uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrograms.channel),'Units','normalized','Position',[0.505 0.56 0.485 0.12],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+        uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'text','String','        Channel','Units','normalized','Position',[0.01 0.60 0.49 0.09],'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.spectrogramChannel = uicontrol('Parent',UI.panel.my_spectrograms.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrograms.channel),'Units','normalized','Position',[0.505 0.595 0.485 0.11],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
     
-        UI.panel.my_spectrograms.settings.main = uipanel('Parent',UI.panel.my_spectrograms.main,'Units','normalized','Position',[0.01 0.01 0.99 0.52]);
+        UI.panel.my_spectrograms.settings.main = uipanel('Parent',UI.panel.my_spectrograms.main,'Units','normalized','Position',[0.01 0.01 0.99 0.58]);
 
-        uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style','text','String','Window width (s)','Units','normalized','Position',[0.01 0.73 0.49 0.24],'HorizontalAlignment','left');
-        UI.panel.my_spectrograms.spectrogramWindow = uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrograms.window), 'Units','normalized', 'Position', [0.505 0.75 0.485 0.24],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
-        uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style','text','String','Overlap      (%)','Units','normalized','Position',[0.01, 0.48, 0.49, 0.24],'HorizontalAlignment','left');
-        UI.panel.my_spectrograms.overlap_perc = uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style','Edit','String', num2str(UI.settings.my_spectrograms.overlap_perc),'Units','normalized','Position',[0.505 0.50 0.485 0.24],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+        uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style','text','String','Window width (s)','Units','normalized','Position',[0.01 0.78 0.49 0.2],'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.spectrogramWindow = uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrograms.window), 'Units','normalized', 'Position', [0.505 0.79 0.485 0.2],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+        uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style','text','String','Overlap      (%)','Units','normalized','Position',[0.01, 0.58, 0.49, 0.2],'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.overlap_perc = uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style','Edit','String', num2str(UI.settings.my_spectrograms.overlap_perc),'Units','normalized','Position',[0.505 0.59 0.485 0.2],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
 
-        uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style', 'text','String','Low freq (Hz)', 'Units','normalized', 'Position', [0.01 0.22 0.48 0.24],'HorizontalAlignment','left');
-        UI.panel.my_spectrograms.freq_low = uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrograms.freq_low), 'Units','normalized', 'Position', [0.01 0.01 0.48 0.24],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+        uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style','text','String','Timeband','Units','normalized','Position',[0.01, 0.385, 0.49, 0.2],'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.timeband = uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style','Edit','String', num2str(UI.settings.my_spectrograms.timeband),'Units','normalized','Position',[0.505 0.39 0.485 0.2],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+
+        uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style', 'text','String','Low freq (Hz)', 'Units','normalized', 'Position', [0.01 0.19 0.48 0.2],'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.freq_low = uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrograms.freq_low), 'Units','normalized', 'Position', [0.01 0.01 0.48 0.2],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
         
-        uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style', 'text','String','High freq (Hz)', 'Units','normalized', 'Position', [0.51 0.22 0.48 0.24],'HorizontalAlignment','left');
-        UI.panel.my_spectrograms.freq_high = uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrograms.freq_high), 'Units','normalized', 'Position', [0.51 0.01 0.48 0.24],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
+        uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style', 'text','String','High freq (Hz)', 'Units','normalized', 'Position', [0.51 0.19 0.48 0.2],'HorizontalAlignment','left');
+        UI.panel.my_spectrograms.freq_high = uicontrol('Parent',UI.panel.my_spectrograms.settings.main,'Style', 'Edit', 'String', num2str(UI.settings.my_spectrograms.freq_high), 'Units','normalized', 'Position', [0.51 0.01 0.48 0.2],'Callback',@toggleMySpectrogram,'HorizontalAlignment','center');
         
         % Spectrogram
         UI.panel.spectrogram.main = uipanel('Parent',UI.panel.analysis.main,'title','Spectrogram');
@@ -739,9 +742,9 @@ end
         UI.panel.audio.rightChannel = uicontrol('Parent',UI.panel.audio.main,'Style', 'Edit', 'String', num2str(UI.settings.audioChannels(2)), 'Units','normalized', 'Position', [0.505 0 0.485 0.36],'HorizontalAlignment','center','tooltip','Right channel','Callback',@togglePlayAudio);
                 
         % Defining flexible panel heights
-        set(UI.panel.analysis.main, 'Heights', [210 150 60 100 100 100],'MinimumHeights',[210 150 60 100 100 100]);
+        set(UI.panel.analysis.main, 'Heights', [240 150 60 100 100 100],'MinimumHeights',[240 150 60 100 100 100]);
         UI.panel.analysis.main1.MinimumWidths = 218;
-        UI.panel.analysis.main1.MinimumHeights = 720;
+        UI.panel.analysis.main1.MinimumHeights = 750;
         
         % % % % % % % % % % % % % % % % % % % % % %
         % Lower info panel elements
@@ -2323,7 +2326,7 @@ end
         % SpecWindow = round(ephys.sr*UI.settings.channel_spectrogram.window);
         nFFT = SpecWindow * 2;
         noverlap = round(SpecWindow * UI.settings.my_spectrograms.overlap_perc / 100);
-        TimeBand = 2;
+        TimeBand = UI.settings.my_spectrograms.timeband;
         FreqRange = [UI.settings.my_spectrograms.freq_low UI.settings.my_spectrograms.freq_high];
         y = [];
         f = [];
@@ -2408,7 +2411,7 @@ end
             % TODO: add as parameter?
             
             noverlap = round(SpecWindow * UI.settings.my_spectrograms.overlap_perc / 100);
-            TimeBand = 2;
+            TimeBand = UI.settings.my_spectrograms.timeband;
             % TODO: see step
             % FreqRange = freq_range; % TODO: can't be like that. format [[1 3], [3 5], ...]
             FreqRange = [UI.settings.my_spectrograms.freq_low UI.settings.my_spectrograms.freq_high];
@@ -5026,6 +5029,22 @@ end
                 UI.settings.showMySpectrogram = false;
                 UI.settings.showChannelSpectrogram = false;
                 MsgLog('The spectrogram overlap is not a valid percentage',4);
+                return
+            end
+
+            % Timeband
+            timeband = str2double(UI.panel.my_spectrograms.timeband.String);
+            curr_spec_window = 2^floor(log2(UI.settings.my_spectrograms.window * ephys.sr));
+            if numeric_gt_0(timeband) && timeband < curr_spec_window / 2
+                UI.settings.my_spectrograms.timeband = timeband;
+                UI.settings.showMySpectrogram = UI.panel.my_spectrograms.showSpectrogram.Value == 1;
+                UI.settings.showChannelSpectrogram = UI.panel.my_spectrograms.showChannelSpectrogram.Value == 1;
+                my_spectrogram.recalculateSpectrogram = true;
+            else
+                UI.settings.showMySpectrogram = false;
+                UI.settings.showChannelSpectrogram = false;
+                UI.panel.my_spectrograms.timeband.String = num2str(UI.settings.my_spectrograms.timeband);
+                MsgLog("The spectrogram timeband should be a positive integer lower than half the current window." + newline + "Current Window: " + num2str(floor(curr_spec_window)),4);
                 return
             end
 
