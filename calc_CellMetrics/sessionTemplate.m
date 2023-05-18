@@ -112,7 +112,7 @@ defaults.extracellular.srLfp = 1250;         % Sampling rate of LFP data
 defaults.extracellular.nChannels = 64;       % number of channels
 defaults.extracellular.fileName = '';        % (optional) file name of raw data if different from basename.dat
 defaults.extracellular.electrodeGroups.channels = {[1:defaults.extracellular.nChannels]}; %creating a default list of channels. Please change according to your own layout. 
-defaults.extracellular.leastSignificantBit = 0.195; % (in µV) Intan = 0.195, Amplipex = 0.3815
+defaults.extracellular.leastSignificantBit = 0.195; % (in ï¿½V) Intan = 0.195, Amplipex = 0.3815
 defaults.extracellular.probeDepths = 0;
 defaults.extracellular.precision = 'int16';
 
@@ -218,7 +218,7 @@ end
 % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 if ~isfield(session,'extracellular') || ~isfield(session.extracellular,'chanCoords') 
     session.extracellular.chanCoords.layout = 'poly2'; % Probe layout: linear,staggered,poly2,edge,poly3,poly5
-    session.extracellular.chanCoords.verticalSpacing = 10; % (µm) Vertical spacing between sites.
+    session.extracellular.chanCoords.verticalSpacing = 10; % (ï¿½m) Vertical spacing between sites.
 end
 
 % % % % % % % % % % % % % % % % % % % % % % % % % % % %
@@ -304,11 +304,28 @@ if (~isfield(session.general,'date') || isempty(session.general.date)) && isfiel
     session.general.date = sessionInfo.Date;
 end
 if isfield(session,'extracellular') && isfield(session.extracellular,'nChannels')
-    fullpath = fullfile(session.general.basePath,[session.general.name,'.dat']);
-    if exist(fullpath,'file')
-        temp2_ = dir(fullpath);
-        session.extracellular.nSamples = temp2_.bytes/session.extracellular.nChannels/2;
-        session.general.duration = session.extracellular.nSamples/session.extracellular.sr;
+    fileExtensions = {'.dat', '.lfp'};
+    sampleSize = 0;
+    switch session.extracellular.precision
+        case {'uchar','unsigned char','schar','signed char','int8','integer*1','uint8','integer*1'},
+            sampleSize = 1;
+        case {'int16','integer*2','uint16','integer*2'},
+            sampleSize = 2;
+        case {'int32','integer*4','uint32','integer*4','single','real*4','float32','real*4'},
+            sampleSize = 4;
+        case {'int64','integer*8','uint64','integer*8','double','real*8','float64','real*8'},
+            sampleSize = 8;
+    end
+    
+    for i = 1:numel(fileExtensions)
+        fullpath = fullfile(session.general.basePath, [session.general.name, fileExtensions{i}]);
+        
+        if exist(fullpath, 'file')
+            temp2_ = dir(fullpath);
+            session.extracellular.nSamples = temp2_.bytes / session.extracellular.nChannels / sampleSize;
+            session.general.duration = session.extracellular.nSamples / session.extracellular.sr;
+            break;
+        end
     end
 end
 
