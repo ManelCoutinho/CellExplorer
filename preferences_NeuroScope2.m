@@ -13,6 +13,7 @@ preferences.windowDuration = 1; % window duration in seconds
 preferences.scalingFactor = 50; % Scaling factor
 preferences.plotStyle = 2; % Plot style
 preferences.greyScaleTraces = 1; % Plot colors
+preferences.sparsify = 1; % Sparsify factor
 preferences.channelOrder = 1; % Channel order
 preferences.plotTracesInColumns = false; % Plot traces in columns
 preferences.colorByChannels = false; % Color by channel order

@@ -463,25 +463,29 @@ end
         
         % Electrophysiology
         UI.panel.general.filter = uipanel('Parent',UI.panel.general.main,'title','Extracellular traces');
-        uicontrol('Parent',UI.panel.general.filter,'Style', 'text', 'String', 'Plot style', 'Units','normalized', 'Position', [0.01 0.87 0.3 0.1],'HorizontalAlignment','left','tooltip','Select plot style');
-        uicontrol('Parent',UI.panel.general.filter,'Style', 'text', 'String', 'Plot colors', 'Units','normalized', 'Position', [0.01 0.74 0.3 0.1],'HorizontalAlignment','left','tooltip','Select plot colors/greyscale');
-        UI.panel.general.plotStyle = uicontrol('Parent',UI.panel.general.filter,'Style', 'popup','String',{'Downsampled','Range','Raw','LFP (*.lfp file)','Image','No ephys traces'}, 'value', UI.settings.plotStyle, 'Units','normalized', 'Position', [0.3 0.86 0.69 0.12],'Callback',@changePlotStyle,'HorizontalAlignment','left');
-        UI.panel.general.colorScale = uicontrol('Parent',UI.panel.general.filter,'Style', 'popup','String',{'Colors','Colors 75%','Colors 50%','Colors 25%','Grey-scale','Grey-scale 75%','Grey-scale 50%','Grey-scale 25%'}, 'value', 1, 'Units','normalized', 'Position', [0.3 0.73 0.69 0.12],'Callback',@changeColorScale,'HorizontalAlignment','left');
-        UI.panel.general.filterToggle = uicontrol('Parent',UI.panel.general.filter,'Style', 'checkbox','String','Filter traces', 'value', 0, 'Units','normalized', 'Position', [0. 0.62 0.5 0.11],'Callback',@changeTraceFilter,'HorizontalAlignment','left','tooltip','Filter ephys traces');
-        UI.panel.general.extraSpacing = uicontrol('Parent',UI.panel.general.filter,'Style', 'checkbox','String','Group spacing', 'value', 0, 'Units','normalized', 'Position', [0.5 0.62 0.5 0.11],'Callback',@extraSpacing,'HorizontalAlignment','left','tooltip','Spacing between channels from different electrode groups');
+        uicontrol('Parent',UI.panel.general.filter,'Style', 'text', 'String', 'Plot style', 'Units','normalized', 'Position', [0.01 0.89 0.3 0.09],'HorizontalAlignment','left','tooltip','Select plot style');
+        uicontrol('Parent',UI.panel.general.filter,'Style', 'text', 'String', 'Plot colors', 'Units','normalized', 'Position', [0.01 0.78 0.3 0.09],'HorizontalAlignment','left','tooltip','Select plot colors/greyscale');
+        uicontrol('Parent',UI.panel.general.filter,'Style', 'text', 'String', 'Sparsify', 'Units','normalized', 'Position', [0.01 0.67 0.3 0.09],'HorizontalAlignment','left','tooltip','Select channels to drop');
+        
+        UI.panel.general.plotStyle = uicontrol('Parent',UI.panel.general.filter,'Style', 'popup','String',{'Downsampled','Range','Raw','LFP (*.lfp file)','Image','No ephys traces'}, 'value', UI.settings.plotStyle, 'Units','normalized', 'Position', [0.3 0.88 0.69 0.1],'Callback',@changePlotStyle,'HorizontalAlignment','left');
+        UI.panel.general.colorScale = uicontrol('Parent',UI.panel.general.filter,'Style', 'popup','String',{'Colors','Colors 75%','Colors 50%','Colors 25%','Grey-scale','Grey-scale 75%','Grey-scale 50%','Grey-scale 25%'}, 'value', 1, 'Units','normalized', 'Position', [0.3 0.77 0.69 0.1],'Callback',@changeColorScale,'HorizontalAlignment','left');
+        UI.panel.general.sparsify = uicontrol('Parent',UI.panel.general.filter,'Style', 'popup','String',{'All','Half','Third','Fourth','Fifth'}, 'value', UI.settings.sparsify, 'Units','normalized', 'Position', [0.3 0.66 0.69 0.1],'Callback',@sparsifyChannels,'HorizontalAlignment','left');
+
+        UI.panel.general.filterToggle = uicontrol('Parent',UI.panel.general.filter,'Style', 'checkbox','String','Filter traces', 'value', 0, 'Units','normalized', 'Position', [0. 0.55 0.5 0.1],'Callback',@changeTraceFilter,'HorizontalAlignment','left','tooltip','Filter ephys traces');
+        UI.panel.general.extraSpacing = uicontrol('Parent',UI.panel.general.filter,'Style', 'checkbox','String','Group spacing', 'value', 0, 'Units','normalized', 'Position', [0.5 0.55 0.5 0.1],'Callback',@extraSpacing,'HorizontalAlignment','left','tooltip','Spacing between channels from different electrode groups');
         if UI.settings.extraSpacing
             UI.panel.general.extraSpacing.Value = 1;
         end
-        uicontrol('Parent',UI.panel.general.filter,'Style', 'text', 'String', 'Lower filter (Hz)', 'Units','normalized', 'Position', [0.0 0.52 0.5 0.09],'HorizontalAlignment','center');
-        uicontrol('Parent',UI.panel.general.filter,'Style', 'text', 'String', 'Higher filter (Hz)', 'Units','normalized', 'Position', [0.5 0.52 0.5 0.09],'HorizontalAlignment','center');
-        UI.panel.general.lowerBand  = uicontrol('Parent',UI.panel.general.filter,'Style', 'Edit', 'String', '400', 'Units','normalized', 'Position', [0.01 0.39 0.48 0.12],'Callback',@changeTraceFilter,'HorizontalAlignment','center','tooltip','Lower frequency boundary (Hz)');
-        UI.panel.general.higherBand = uicontrol('Parent',UI.panel.general.filter,'Style', 'Edit', 'String', '', 'Units','normalized', 'Position', [0.5 0.39 0.49 0.12],'Callback',@changeTraceFilter,'HorizontalAlignment','center','tooltip','Higher frequency band (Hz)');
-        UI.panel.general.plotEnergy = uicontrol('Parent',UI.panel.general.filter,'Style', 'checkbox','String','Absolute smoothing (sec)', 'value', 0, 'Units','normalized', 'Position', [0.01 0.26 0.68 0.12],'Callback',@plotEnergy,'HorizontalAlignment','left');
-        UI.panel.general.energyWindow = uicontrol('Parent',UI.panel.general.filter,'Style', 'Edit', 'String', num2str(UI.settings.energyWindow), 'Units','normalized', 'Position', [0.7 0.26 0.29 0.12],'Callback',@plotEnergy,'HorizontalAlignment','center','tooltip','Smoothing window (seconds)');
-        UI.panel.general.detectEvents = uicontrol('Parent',UI.panel.general.filter,'Style', 'checkbox','String',['Detect events (',char(181),'V)'], 'value', 0, 'Units','normalized', 'Position', [0.01 0.135 0.68 0.12],'Callback',@toogleDetectEvents,'HorizontalAlignment','left');
-        UI.panel.general.eventThreshold = uicontrol('Parent',UI.panel.general.filter,'Style', 'Edit', 'String', num2str(UI.settings.eventThreshold), 'Units','normalized', 'Position', [0.7 0.135 0.29 0.12],'Callback',@toogleDetectEvents,'HorizontalAlignment','center','tooltip',['Event detection threshold (',char(181),'V)']);
-        UI.panel.general.detectSpikes = uicontrol('Parent',UI.panel.general.filter,'Style', 'checkbox','String',['Detect spikes (',char(181),'V)'], 'value', 0, 'Units','normalized', 'Position', [0.01 0.01 0.68 0.12],'Callback',@toogleDetectSpikes,'HorizontalAlignment','left');
-        UI.panel.general.detectThreshold = uicontrol('Parent',UI.panel.general.filter,'Style', 'Edit', 'String', num2str(UI.settings.spikesDetectionThreshold), 'Units','normalized', 'Position', [0.7 0.01 0.29 0.12],'Callback',@toogleDetectSpikes,'HorizontalAlignment','center','tooltip',['Spike detection threshold (',char(181),'V)']);
+        uicontrol('Parent',UI.panel.general.filter,'Style', 'text', 'String', 'Lower filter (Hz)', 'Units','normalized', 'Position', [0.0 0.46 0.5 0.08],'HorizontalAlignment','center');
+        uicontrol('Parent',UI.panel.general.filter,'Style', 'text', 'String', 'Higher filter (Hz)', 'Units','normalized', 'Position', [0.5 0.46 0.5 0.08],'HorizontalAlignment','center');
+        UI.panel.general.lowerBand  = uicontrol('Parent',UI.panel.general.filter,'Style', 'Edit', 'String', '400', 'Units','normalized', 'Position', [0.01 0.35 0.48 0.11],'Callback',@changeTraceFilter,'HorizontalAlignment','center','tooltip','Lower frequency boundary (Hz)');
+        UI.panel.general.higherBand = uicontrol('Parent',UI.panel.general.filter,'Style', 'Edit', 'String', '', 'Units','normalized', 'Position', [0.5 0.35 0.49 0.11],'Callback',@changeTraceFilter,'HorizontalAlignment','center','tooltip','Higher frequency band (Hz)');
+        UI.panel.general.plotEnergy = uicontrol('Parent',UI.panel.general.filter,'Style', 'checkbox','String','Absolute smoothing (sec)', 'value', 0, 'Units','normalized', 'Position', [0.01 0.23 0.68 0.11],'Callback',@plotEnergy,'HorizontalAlignment','left');
+        UI.panel.general.energyWindow = uicontrol('Parent',UI.panel.general.filter,'Style', 'Edit', 'String', num2str(UI.settings.energyWindow), 'Units','normalized', 'Position', [0.7 0.23 0.29 0.11],'Callback',@plotEnergy,'HorizontalAlignment','center','tooltip','Smoothing window (seconds)');
+        UI.panel.general.detectEvents = uicontrol('Parent',UI.panel.general.filter,'Style', 'checkbox','String',['Detect events (',char(181),'V)'], 'value', 0, 'Units','normalized', 'Position', [0.01 0.12 0.68 0.11],'Callback',@toogleDetectEvents,'HorizontalAlignment','left');
+        UI.panel.general.eventThreshold = uicontrol('Parent',UI.panel.general.filter,'Style', 'Edit', 'String', num2str(UI.settings.eventThreshold), 'Units','normalized', 'Position', [0.7 0.12 0.29 0.11],'Callback',@toogleDetectEvents,'HorizontalAlignment','center','tooltip',['Event detection threshold (',char(181),'V)']);
+        UI.panel.general.detectSpikes = uicontrol('Parent',UI.panel.general.filter,'Style', 'checkbox','String',['Detect spikes (',char(181),'V)'], 'value', 0, 'Units','normalized', 'Position', [0.01 0.01 0.68 0.11],'Callback',@toogleDetectSpikes,'HorizontalAlignment','left');
+        UI.panel.general.detectThreshold = uicontrol('Parent',UI.panel.general.filter,'Style', 'Edit', 'String', num2str(UI.settings.spikesDetectionThreshold), 'Units','normalized', 'Position', [0.7 0.01 0.29 0.11],'Callback',@toogleDetectSpikes,'HorizontalAlignment','center','tooltip',['Spike detection threshold (',char(181),'V)']);
         
         % Electrode groups
         UI.uitabgroup_channels = uiextras.TabPanel('Parent', UI.panel.general.main, 'Padding', 1,'FontSize',UI.settings.fontsize ,'TabSize',50);
@@ -530,9 +534,9 @@ end
         uicontrol('Parent',UI.panel.timeseriesdata.main,'Style','pushbutton','Units','normalized','Position',[0.5 0 0.49 0.19],'String','Edit','Callback',@editIntanMeta,'KeyPressFcn', @keyPress,'tooltip','Edit session metadata');
             
         % Defining flexible panel heights
-        set(UI.panel.general.main, 'Heights', [65 65 210 -210 35 -90 35 100 40 150],'MinimumHeights',[65 65 210 200 35 140 35 50 30 150]);
+        set(UI.panel.general.main, 'Heights', [65 65 235 -210 35 -90 35 100 40 150],'MinimumHeights',[65 65 235 200 35 140 35 50 30 150]);
         UI.panel.general.main1.MinimumWidths = 218;
-        UI.panel.general.main1.MinimumHeights = 1035;
+        UI.panel.general.main1.MinimumHeights = 1060;
         
         % % % % % % % % % % % % % % % % % % % % % %
         % 2. PANEL: Spikes related metrics
@@ -5492,6 +5496,13 @@ end
             end
         end
         
+        
+        % Filtering channel by sparse list
+        for j = 1:numel(UI.channels)
+            [~,idx] = setdiff(UI.channels{j},UI.settings.sparseChannels{j});
+            UI.channels{j}(idx) = [];
+        end
+
         % Filtering channel by channel list
         for j = 1:numel(UI.channels)
             [~,idx] = setdiff(UI.channels{j},UI.settings.channelList);
@@ -5684,6 +5695,7 @@ end
         UI.t1 = UI.t0;
         UI.t0_track = UI.t0;
         UI.settings.ecog_grid.sample_end = data.session.extracellular.nSamples;
+        UI.settings.sparseChannels = data.session.extracellular.electrodeGroups.channels;
 
         % UI.settings.colormap
         try
@@ -5841,8 +5853,8 @@ end
         end
         tableHeights_Timeseries3 = nfiles*18+50;
         
-        set(UI.panel.general.main, 'MinimumHeights',[65 65 210 tableHeights_ElectrodeGroups 35 tableHeights_ChannelTags 35 100 40 tableHeights_Timeseries3]);
-        UI.panel.general.main1.MinimumHeights = 670 + tableHeights_ElectrodeGroups + tableHeights_ChannelTags + tableHeights_Timeseries3;
+        set(UI.panel.general.main, 'MinimumHeights',[65 65 235 tableHeights_ElectrodeGroups 35 tableHeights_ChannelTags 35 100 40 tableHeights_Timeseries3]);
+        UI.panel.general.main1.MinimumHeights = 695 + tableHeights_ElectrodeGroups + tableHeights_ChannelTags + tableHeights_Timeseries3;
         
         % Defining flexible panel heights for events and timeseries files
         if isfield(UI.data.detectecFiles,'timeSeries') && ~isempty(data.session.timeSeries)
@@ -6365,6 +6377,21 @@ end
     function buttonChannelList(~,~)
         channelOrder = [data.session.extracellular.electrodeGroups.channels{:}];
         UI.settings.channelList = channelOrder(UI.listbox.channelList.Value);
+        initTraces
+        uiresume(UI.fig);
+    end
+
+    function sparsifyChannels(~,~)
+        UI.settings.sparsify = UI.panel.general.sparsify.Value;
+
+        numGroups = numel(data.session.extracellular.electrodeGroups.channels);
+        UI.settings.sparseChannels = cell(1, numGroups);
+    
+        for i = 1:numGroups
+            channelIndices = 1:UI.settings.sparsify:size(data.session.extracellular.electrodeGroups.channels{i}, 2);
+            UI.settings.sparseChannels{i} = data.session.extracellular.electrodeGroups.channels{i}(:, channelIndices);
+        end
+
         initTraces
         uiresume(UI.fig);
     end
