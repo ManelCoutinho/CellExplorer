@@ -39,7 +39,7 @@ There are 2 main ways of running the script:
 	```
 2. With name of the file as an argument
    ```shell
-	foo@bar:~$ ./NeuroScope2 /path/to/file.xml
+	foo@bar:~$ ./NeuroScope2 /path/to/file.lfp
 	```
 
 ## New Main Features
@@ -71,13 +71,15 @@ In addition to the usual zoom, pan and move mouse iteraction, the _Right Click_ 
 
 ### ECoG Grid
 **Description**:  
-Shows a grid of the current sample color coded in a new window for ECoG visualizations. Assumes that the session has 256 channels.
+Shows a grid of the current sample color coded in a new window for ECoG visualizations. Groups and size are infered from the .xml file.   
+It also enables the user to export a video of the ecog grid evolution across a desired interval.
 
 **Location**:  
 Menu Bar &rarr; Settings Option &rarr; Show ECoG Grid
 
 **Interaction**:  
-You can change the sample being represented by left clicking on the ephys traces. _Right Mouse Click_ on the grid selects the corresponding channel to hightlight (might influence other spectrograms). 
+You can change the sample being represented by left clicking on the ephys traces. _Right Mouse Click_ on the grid selects the corresponding channel to hightlight (might influence other spectrograms).  
+You can use the options to set a fixed scale for the ECoG grid and export a video of a defined interval with the desired frame rate, sample step,...
 
 
 ### Clustering
