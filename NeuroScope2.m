@@ -2310,9 +2310,27 @@ end
         if isfield(UI.ecog,'line') && ~isempty(UI.ecog.line)
             delete(UI.ecog.line);
         end
+        % Plot Lines
         UI.ecog.line = plotLines(UI.ecog.sample/ephys.sr,[0;1],'white','--',1,true);
-        
+        ecog_t_start = UI.settings.ecog_grid.sample_start /ephys.sr;
+        ecog_t_end = UI.settings.ecog_grid.sample_end /ephys.sr;
+        if isfield(UI.ecog,'line_start') && ishandle(UI.ecog.line_start)
+            delete(UI.ecog.line_start)
+        end       
+        if ecog_t_start >= UI.t0 && ecog_t_start <= UI.t0+UI.settings.windowDuration
+            UI.ecog.line_start = plotLines(ecog_t_start-UI.t0,[0;1],'#02a10f','-',1,true);
+        end
+        if isfield(UI.ecog,'line_end') && ishandle(UI.ecog.line_end)
+            delete(UI.ecog.line_end)
+        end  
+        if ecog_t_end >= UI.t0 && ecog_t_end <= UI.t0+UI.settings.windowDuration
+            UI.ecog.line_end = plotLines(ecog_t_end-UI.t0,[0;1],'#02a10f','-',1,true);
+        end        
+
+        % Plot Grid
         sampleEcogGrid(UI.ecog_grid_axis, ephys.traces(UI.ecog.sample,UI.channelOrder) / UI.settings.scalingFactor * 1000000);
+
+        % Click Highlighting
         nCols = data.session.extracellular.nElectrodeGroups;
         nRows = numel(data.session.extracellular.electrodeGroups.channels{1});
         if UI.settings.my_spectrograms.highlight_channel
@@ -3092,6 +3110,22 @@ end
             
             epoch_plotElements.ecog_grid_start = line(UI.epochAxes,[UI.settings.ecog_grid.sample_start /ephys.sr,UI.settings.ecog_grid.sample_start /ephys.sr],[0,1],'color','#02a10f', 'HitTest','off','linewidth',1);
             epoch_plotElements.ecog_grid_end = line(UI.epochAxes,[UI.settings.ecog_grid.sample_end /ephys.sr,UI.settings.ecog_grid.sample_end /ephys.sr],[0,1],'color','#02a10f', 'HitTest','off','linewidth',1);
+
+            % Update normal plot lines
+            ecog_t_start = UI.settings.ecog_grid.sample_start /ephys.sr;
+            ecog_t_end = UI.settings.ecog_grid.sample_end /ephys.sr;        
+            if isfield(UI.ecog,'line_start') && ishandle(UI.ecog.line_start)
+                delete(UI.ecog.line_start)
+            end       
+            if ecog_t_start >= UI.t0 && ecog_t_start <= UI.t0+UI.settings.windowDuration
+                UI.ecog.line_start = plotLines(ecog_t_start-UI.t0,[0;1],'#02a10f','-',1,true);
+            end
+            if isfield(UI.ecog,'line_end') && ishandle(UI.ecog.line_end)
+                delete(UI.ecog.line_end)
+            end  
+            if ecog_t_end >= UI.t0 && ecog_t_end <= UI.t0+UI.settings.windowDuration
+                UI.ecog.line_end = plotLines(ecog_t_end-UI.t0,[0;1],'#02a10f','-',1,true);
+            end  
         end
     end
 
@@ -3118,7 +3152,6 @@ end
         if ishandle(epoch_plotElements.ecog_grid_end)
             delete(epoch_plotElements.ecog_grid_end)
         end
-        % TODO: see what more to clean
     end
 
     function close_cluster(~, ~, ~)
