@@ -43,6 +43,8 @@ UI.selectedUnitsColors = [];
 spikes_raster = []; % Spike raster (used for highlighting, to minimize computations)
 epoch_plotElements.t0 = [];
 epoch_plotElements.events = [];
+epoch_plotElements.ecog_grid_start = [];
+epoch_plotElements.ecog_grid_end = [];
 raster = [];
 sliderMovedManually = false;
 deviceWriter = [];
@@ -159,6 +161,17 @@ while UI.t0 >= 0
             delete(epoch_plotElements.t0)
         end
         epoch_plotElements.t0 = line(UI.epochAxes,[UI.t0,UI.t0],[0,1],'color','k', 'HitTest','off','linewidth',1);
+        if UI.settings.showEcogGrid
+            if ishandle(epoch_plotElements.ecog_grid_start)
+                delete(epoch_plotElements.ecog_grid_start)
+            end
+            if ishandle(epoch_plotElements.ecog_grid_end)
+                delete(epoch_plotElements.ecog_grid_end)
+            end
+            
+            epoch_plotElements.ecog_grid_start = line(UI.epochAxes,[UI.settings.ecog_grid.sample_start /ephys.sr,UI.settings.ecog_grid.sample_start /ephys.sr],[0,1],'color','#02a10f', 'HitTest','off','linewidth',1);
+            epoch_plotElements.ecog_grid_end = line(UI.epochAxes,[UI.settings.ecog_grid.sample_end /ephys.sr,UI.settings.ecog_grid.sample_end /ephys.sr],[0,1],'color','#02a10f', 'HitTest','off','linewidth',1);
+        end
         
         % Update UI text and slider
         UI.elements.lower.time.String = num2str(UI.t0);
@@ -2286,9 +2299,7 @@ end
     function sampleEcogGrid(axis, data_sample)
         map = NaN(1, data.session.extracellular.nChannels);
         map(1, UI.channelOrder) = data_sample;
-        nCols = data.session.extracellular.nElectrodeGroups;
-        nRows = numel(data.session.extracellular.electrodeGroups.channels{1});
-        map = reshape(map, [nRows,nCols]);
+        map = reshape(map, [numel(data.session.extracellular.electrodeGroups.channels{1}),data.session.extracellular.nElectrodeGroups]);
         % TODO: maybe remove in the future
         %map = imgaussfilt(map, 1);
         imagesc(axis, map,'AlphaData',~isnan(map),'HitTest','off');
@@ -2306,10 +2317,29 @@ end
         if isfield(UI.ecog,'line') && ~isempty(UI.ecog.line)
             delete(UI.ecog.line);
         end
+        % Plot Lines
         UI.ecog.line = plotLines(UI.ecog.sample/ephys.sr,[0;1],'white','--',1,true);
-        
+        ecog_t_start = UI.settings.ecog_grid.sample_start /ephys.sr;
+        ecog_t_end = UI.settings.ecog_grid.sample_end /ephys.sr;
+        if isfield(UI.ecog,'line_start') && ishandle(UI.ecog.line_start)
+            delete(UI.ecog.line_start)
+        end       
+        if ecog_t_start >= UI.t0 && ecog_t_start <= UI.t0+UI.settings.windowDuration
+            UI.ecog.line_start = plotLines(ecog_t_start-UI.t0,[0;1],'#02a10f','-',1,true);
+        end
+        if isfield(UI.ecog,'line_end') && ishandle(UI.ecog.line_end)
+            delete(UI.ecog.line_end)
+        end  
+        if ecog_t_end >= UI.t0 && ecog_t_end <= UI.t0+UI.settings.windowDuration
+            UI.ecog.line_end = plotLines(ecog_t_end-UI.t0,[0;1],'#02a10f','-',1,true);
+        end        
+
+        % Plot Grid
         sampleEcogGrid(UI.ecog_grid_axis, ephys.traces(UI.ecog.sample,UI.channelOrder) / UI.settings.scalingFactor * 1000000);
 
+        % Click Highlighting
+        nCols = data.session.extracellular.nElectrodeGroups;
+        nRows = numel(data.session.extracellular.electrodeGroups.channels{1});
         if UI.settings.my_spectrograms.highlight_channel
             if data.session.extracellular.electrodeGroups.channels{1}(2)-data.session.extracellular.electrodeGroups.channels{1}(1) == 1
                 % Column-ordered
@@ -3076,10 +3106,38 @@ end
                 MsgLog('Sample step should be bigger than 0',4);
                 return
             end
+
+            % Update epoch lines
+            if ishandle(epoch_plotElements.ecog_grid_start)
+                delete(epoch_plotElements.ecog_grid_start)
+            end
+            if ishandle(epoch_plotElements.ecog_grid_end)
+                delete(epoch_plotElements.ecog_grid_end)
+            end
+            
+            epoch_plotElements.ecog_grid_start = line(UI.epochAxes,[UI.settings.ecog_grid.sample_start /ephys.sr,UI.settings.ecog_grid.sample_start /ephys.sr],[0,1],'color','#02a10f', 'HitTest','off','linewidth',1);
+            epoch_plotElements.ecog_grid_end = line(UI.epochAxes,[UI.settings.ecog_grid.sample_end /ephys.sr,UI.settings.ecog_grid.sample_end /ephys.sr],[0,1],'color','#02a10f', 'HitTest','off','linewidth',1);
+
+            % Update normal plot lines
+            ecog_t_start = UI.settings.ecog_grid.sample_start /ephys.sr;
+            ecog_t_end = UI.settings.ecog_grid.sample_end /ephys.sr;        
+            if isfield(UI.ecog,'line_start') && ishandle(UI.ecog.line_start)
+                delete(UI.ecog.line_start)
+            end       
+            if ecog_t_start >= UI.t0 && ecog_t_start <= UI.t0+UI.settings.windowDuration
+                UI.ecog.line_start = plotLines(ecog_t_start-UI.t0,[0;1],'#02a10f','-',1,true);
+            end
+            if isfield(UI.ecog,'line_end') && ishandle(UI.ecog.line_end)
+                delete(UI.ecog.line_end)
+            end  
+            if ecog_t_end >= UI.t0 && ecog_t_end <= UI.t0+UI.settings.windowDuration
+                UI.ecog.line_end = plotLines(ecog_t_end-UI.t0,[0;1],'#02a10f','-',1,true);
+            end  
         end
     end
 
     function close_ecog_grid(hObject, ~, ~)
+        UI.settings.stream = false;
         delete(hObject);
         UI.settings.showEcogGrid = false;
         if isfield(UI,'ecog')
@@ -3095,7 +3153,12 @@ end
         if ~UI.settings.showMySpectrogram
             UI.settings.my_spectrograms.highlight_channel = false;
         end
-        % TODO: see what more to clean
+        if ishandle(epoch_plotElements.ecog_grid_start)
+            delete(epoch_plotElements.ecog_grid_start)
+        end
+        if ishandle(epoch_plotElements.ecog_grid_end)
+            delete(epoch_plotElements.ecog_grid_end)
+        end
     end
 
     function close_cluster(~, ~, ~)
@@ -3486,7 +3549,7 @@ end
             while UI.settings.stream
                 streamTic = tic;
                 if UI.settings.showEcogGrid
-                    while UI.ecog.sample < size(ephys.traces, 1) && UI.settings.stream
+                    while UI.settings.stream && UI.ecog.sample < size(ephys.traces, 1)
                         streamEcogTic = tic;
                         UI.ecog.sample = UI.ecog.sample + 1;
                         plotEcogGrid;
@@ -3562,7 +3625,7 @@ end
 
             if UI.settings.showEcogGrid && ended
                 UI.settings.stream = true;
-                while UI.ecog.sample < size(ephys.traces, 1) && UI.settings.stream
+                while UI.settings.stream && UI.ecog.sample < size(ephys.traces, 1)
                     streamEcogTic = tic;
                     UI.ecog.sample = UI.ecog.sample + 1;
                     plotEcogGrid;
