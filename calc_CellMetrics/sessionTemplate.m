@@ -28,6 +28,7 @@ addParameter(p,'basename',[],@isstr);
 addParameter(p,'importSkippedChannels',true,@islogical); % Import skipped channels from the xml as bad channels
 addParameter(p,'importSyncedChannels',true,@islogical);  % Import channel not synchronized between electrode groups and spike groups as bad channels
 addParameter(p,'showGUI',false,@islogical);              % Show the session gui
+addParameter(p,'srLfp',false,@islogical);                % Defaults to sample rate defined in the acquisition field
 
 % Parsing inputs
 parse(p,input1,varargin{:})
@@ -35,6 +36,7 @@ basename = p.Results.basename;
 importSkippedChannels = p.Results.importSkippedChannels;
 importSyncedChannels = p.Results.importSyncedChannels;
 showGUI = p.Results.showGUI;
+srLfp = p.Results.srLfp;
 
 % Initializing session struct and defining basepath, if not specified as an input
 if ischar(input1)
@@ -323,10 +325,10 @@ if isfield(session,'extracellular') && isfield(session.extracellular,'nChannels'
         if exist(fullpath, 'file')
             temp2_ = dir(fullpath);
             session.extracellular.nSamples = temp2_.bytes / session.extracellular.nChannels / sampleSize;
-            if strcmp(fileExtensions{i}, '.dat')
-                session.general.duration = session.extracellular.nSamples / session.extracellular.sr;
-            else
+            if srLfp
                 session.general.duration = session.extracellular.nSamples / session.extracellular.srLfp;
+            else
+                session.general.duration = session.extracellular.nSamples / session.extracellular.sr;
             end
             break;
         end
