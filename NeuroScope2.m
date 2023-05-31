@@ -30,6 +30,7 @@ function NeuroScope2(varargin)
 % Global variables
 UI = []; % Struct with UI elements and settings
 UI.t0 = 0; % Timestamp of the start of the current window (in seconds)
+UI.srLfp = false; % Defaults lr to defined in acquisition
 data = []; % Contains all external data loaded like data.session, data.spikes, data.events, data.states, data.behavior
 ephys = []; % Struct with ephys data for current shown time interval, e.g. ephys.raw (raw unprocessed data), ephys.traces (processed data)
 ephys.traces = [];
@@ -80,7 +81,7 @@ else
     p = inputParser;
     addParameter(p,'basepath',pwd,@ischar);
     addParameter(p,'basename',[],@ischar);
-    addParameter(p,'lfp',true,@islogical);
+    addParameter(p,'acq',true,@islogical);
     addParameter(p,'session',[],@isstruct);
     addParameter(p,'spikes',[],@ischar);
     addParameter(p,'events',[],@ischar);
@@ -93,9 +94,8 @@ else
     parameters = p.Results;
     basepath = p.Results.basepath;
     basename = p.Results.basename;
-    if parameters.lfp
-        UI.priority = 'lfp';
-    end
+    UI.srLfp = ~parameters.acq;
+
     if isempty(basename)
         basename = basenameFromBasepath(basepath);
     end
@@ -977,6 +977,11 @@ end
         % Setting booleans for validating ephys loading and plotting        
         ephys.loaded = false;
         ephys.plotted = false;
+        if UI.srLfp
+            ephys.sr = data.session.extracellular.srLfp;
+        else
+            ephys.sr = data.session.extracellular.sr;
+        end
         if UI.settings.plotStyle == 4 % lfp file
             if UI.fid.lfp == -1
                 UI.settings.stream = false;
@@ -984,9 +989,13 @@ end
                 text_center('Failed to load LFP data')
                 return
             end
-            ephys.sr = data.session.extracellular.srLfp;
             fileID = UI.fid.lfp;
-            
+        elseif UI.fid.ephys == -1 && UI.settings.plotStyle == 6
+            UI.settings.stream = false;
+            ephys.loaded = false;
+            return
+        elseif UI.settings.plotStyle == 6
+            fileID = UI.fid.ephys;
         else % dat file
             if UI.fid.ephys == -1
                 UI.settings.stream = false;
@@ -994,7 +1003,6 @@ end
                 text_center('Failed to load raw data')
                 return
             end
-            ephys.sr = data.session.extracellular.sr;
             fileID = UI.fid.ephys;
         end
         
@@ -3801,7 +3809,7 @@ end
     
     function initAudioDeviceWriter(~,~)
         if isToolboxInstalled('DSP System Toolbox') || isToolboxInstalled('Audio Toolbox')
-            if UI.settings.plotStyle == 4
+            if UI.srLfp
                 sr = data.session.extracellular.srLfp;
             else
                 sr = data.session.extracellular.sr;
@@ -5651,7 +5659,7 @@ end
         UI.channelOffset = zeros(1,data.session.extracellular.nChannels);
         UI.channelOffset(UI.channelOrder) = channelOffset-1;
         UI.ephys_offset = offset;
-        if UI.settings.plotStyle == 4
+        if UI.srLfp
             UI.channelScaling = ones(ceil(UI.settings.windowDuration*data.session.extracellular.srLfp),1)*UI.channelOffset;
             UI.samplesToDisplay = floor(UI.settings.windowDuration*data.session.extracellular.srLfp);
         else
@@ -5743,9 +5751,9 @@ end
         if ~isfield(data,'session') && exist(fullfile(basepath,[basename,'.session.mat']),'file')
             data.session = loadSession(UI.data.basepath,UI.data.basename);
         elseif ~isfield(data,'session') && exist(fullfile(basepath,[basename,'.xml']),'file')
-            data.session = sessionTemplate(UI.data.basepath,'showGUI',false,'basename',basename);
+            data.session = sessionTemplate(UI.data.basepath,'showGUI',false,'basename',basename,'srLfp',UI.srLfp);
         elseif ~isfield(data,'session')
-            data.session = sessionTemplate(UI.data.basepath,'showGUI',true,'basename',basename);
+            data.session = sessionTemplate(UI.data.basepath,'showGUI',true,'basename',basename,'srLfp',UI.srLfp);
         end
         
         % Loading preferences from session struct
@@ -5852,24 +5860,30 @@ end
             UI.panel.general.plotStyle.Value = UI.settings.plotStyle;
         end
         
+        if UI.srLfp
+            sr = data.session.extracellular.srLfp;
+        else
+            sr = data.session.extracellular.sr;
+        end
+
         if ~isempty(s1) && ~strcmp(UI.priority,'lfp')
             filesize = s1.bytes;
-            UI.t_total = filesize/(data.session.extracellular.nChannels*data.session.extracellular.sr*2);
+            UI.t_total = filesize/(data.session.extracellular.nChannels*sr*2);
 
-            ephys.full = LoadBinary(UI.data.fileName, 'frequency', data.session.extracellular.sr, 'channels', my_spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
+            ephys.full = LoadBinary(UI.data.fileName, 'frequency', sr, 'channels', my_spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
             % TODO: decide parameters
-            [~, my_spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.sr * 2000, 1);
+            [~, my_spectrogram.ARmodel] = WhitenSignal(ephys.full, sr * 2000, 1);
 
         elseif ~isempty(s2)
             UI.priority = 'lfp';
             filesize = s2.bytes;
-            UI.t_total = filesize/(data.session.extracellular.nChannels*data.session.extracellular.srLfp*2);
+            UI.t_total = filesize/(data.session.extracellular.nChannels*sr*2);
             UI.settings.plotStyle = 4;
             UI.panel.general.plotStyle.Value = UI.settings.plotStyle;
 
-            ephys.full = LoadBinary(UI.data.fileNameLFP, 'frequency', data.session.extracellular.srLfp, 'channels', my_spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
+            ephys.full = LoadBinary(UI.data.fileNameLFP, 'frequency', sr, 'channels', my_spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
             % TODO: decide parameters
-            [~, my_spectrogram.ARmodel] = WhitenSignal(ephys.full, data.session.extracellular.srLfp * 2000, 1);
+            [~, my_spectrogram.ARmodel] = WhitenSignal(ephys.full, sr * 2000, 1);
         else
             warning('NeuroScope2: Binary data does not exist')
         end
@@ -6010,12 +6024,17 @@ end
         UI.settings.stream = false;
         s1 = dir(UI.data.fileName);
         s2 = dir(UI.data.fileNameLFP);
+        if UI.srLfp
+            sr = data.session.extracellular.srLfp;
+        else
+            sr = data.session.extracellular.sr;
+        end
         if ~isempty(s1) && ~strcmp(UI.priority,'lfp')
             filesize = s1.bytes;
-            UI.t_total = filesize/(data.session.extracellular.nChannels*data.session.extracellular.sr*2);
+            UI.t_total = filesize/(data.session.extracellular.nChannels*sr*2);
         elseif ~isempty(s2)
             filesize = s2.bytes;
-            UI.t_total = filesize/(data.session.extracellular.nChannels*data.session.extracellular.srLfp*2);
+            UI.t_total = filesize/(data.session.extracellular.nChannels*sr*2);
         end        
     end
     
@@ -6404,7 +6423,7 @@ end
     end
 
     function t0 = valid_t0(t0)
-        t0 = min([max([0,floor(t0*data.session.extracellular.sr)/data.session.extracellular.sr]),UI.t_total-UI.settings.windowDuration]);
+        t0 = min([max([0,floor(t0*ephys.sr)/ephys.sr]),UI.t_total-UI.settings.windowDuration]);
         if isnan(t0)
             t0 = 0;
         end
@@ -6591,14 +6610,14 @@ end
             UI.settings.filterTraces = true;
             UI.settings.filter.lowerBand = str2double(UI.panel.general.lowerBand.String);
             UI.settings.filter.higherBand = str2double(UI.panel.general.higherBand.String);
-            if int_gt_0(UI.settings.filter.lowerBand,data.session.extracellular.sr) && int_gt_0(UI.settings.filter.higherBand,data.session.extracellular.sr) 
+            if int_gt_0(UI.settings.filter.lowerBand,ephys.sr) && int_gt_0(UI.settings.filter.higherBand,ephys.sr) 
                 UI.settings.filterTraces = false;
-            elseif int_gt_0(UI.settings.filter.lowerBand,data.session.extracellular.sr) && ~int_gt_0(UI.settings.filter.higherBand,data.session.extracellular.sr)
-                [UI.settings.filter.b1, UI.settings.filter.a1] = butter(3, UI.settings.filter.higherBand/(data.session.extracellular.sr/2), 'low');
-            elseif int_gt_0(UI.settings.filter.higherBand,data.session.extracellular.sr) && ~int_gt_0(UI.settings.filter.lowerBand,data.session.extracellular.sr)
-                [UI.settings.filter.b1, UI.settings.filter.a1] = butter(3, UI.settings.filter.lowerBand/(data.session.extracellular.sr/2), 'high');
+            elseif int_gt_0(UI.settings.filter.lowerBand,ephys.sr) && ~int_gt_0(UI.settings.filter.higherBand,ephys.sr)
+                [UI.settings.filter.b1, UI.settings.filter.a1] = butter(3, UI.settings.filter.higherBand/(ephys.sr/2), 'low');
+            elseif int_gt_0(UI.settings.filter.higherBand,ephys.sr) && ~int_gt_0(UI.settings.filter.lowerBand,ephys.sr)
+                [UI.settings.filter.b1, UI.settings.filter.a1] = butter(3, UI.settings.filter.lowerBand/(ephys.sr/2), 'high');
             else
-                [UI.settings.filter.b1, UI.settings.filter.a1] = butter(3, [UI.settings.filter.lowerBand,UI.settings.filter.higherBand]/(data.session.extracellular.sr/2), 'bandpass');
+                [UI.settings.filter.b1, UI.settings.filter.a1] = butter(3, [UI.settings.filter.lowerBand,UI.settings.filter.higherBand]/(ephys.sr/2), 'bandpass');
             end
         end
         uiresume(UI.fig);
@@ -7675,13 +7694,13 @@ end
                 spike_clusters = unique(spike_cluster_index);
                 
                 UID = 1;
-                tol_ms = data.session.extracellular.sr/1100; % 1 ms tolerance in timestamp units
+                tol_ms = ephys.sr/1100; % 1 ms tolerance in timestamp units
                 for i = 1:length(spike_clusters)
                     spikes.ids{UID} = find(spike_cluster_index == spike_clusters(i));
                     tol = tol_ms/max(double(spike_times(spikes.ids{UID}))); % unique values within tol (=within 1 ms)
                     [spikes.ts{UID},ind_unique] = uniquetol(double(spike_times(spikes.ids{UID})),tol);
                     spikes.ids{UID} = spikes.ids{UID}(ind_unique);
-                    spikes.times{UID} = spikes.ts{UID}/data.session.extracellular.sr;
+                    spikes.times{UID} = spikes.ts{UID}/ephys.sr;
                     spikes.cluID(UID) = spike_clusters(i);
                     spikes.total(UID) = length(spikes.ts{UID});
                     spikes.amplitudes{UID} = double(spike_amplitudes(spikes.ids{UID}));
@@ -7782,7 +7801,7 @@ end
                 end                
                 
                 for i = 1: N_templates % which is equal to length(info.Groups(4).Datasets) = number of templates
-                    spikes.times{i} = double(h5read(result_file,['/spiketimes/',info.Groups(4).Datasets(i).Name]))/data.session.extracellular.sr;
+                    spikes.times{i} = double(h5read(result_file,['/spiketimes/',info.Groups(4).Datasets(i).Name]))/ephys.sr;
                     template_number = str2double(erase(info.Groups(4).Datasets(i).Name,'temp_'));
                     spikes.cluID(i) = template_number+1; %plus one since temps start with temp_0
                     spikes.total(i) = length(spikes.times{i});

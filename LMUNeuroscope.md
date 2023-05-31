@@ -25,10 +25,11 @@ NeuroScope2('basepath',basepath)
 NeuroScope2('session',session)
 ```
 > **⚠ Warning:**  
-> Neuroscope will assume that you are reading a lfp file by default, if you are using ECoG set the lfp flag to false:
+> Neuroscope will assume that you are using the sample rate defined in the Acquisition Field of the XML file by default. If you want to use the ```lfpSamplingRate``` parameter set the ```acq``` flag to _false_.   
+> If you are using the compiled version, you can use the Session Metadata GUI.
 >```matlab
 >% Setting NeuroScope2 lfp flag
->NeuroScope2('lfp',false)
+>NeuroScope2('acq',false)
 >```
 
 ### Compiled Version
