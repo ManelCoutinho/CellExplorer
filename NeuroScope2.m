@@ -843,7 +843,7 @@ end
         end
 
         if (UI.settings.showChannelSpectrogram || (UI.settings.showEcogGrid && UI.ecog.type.Value == 2)) && ephys.loaded
-            calculateChannelSpectrogram;
+            [channel_spectrogram.spectrogram, channel_spectrogram.f] = calculateChannelSpectrogram(ephys.traces);
         end
 
         % Ecog Grid
@@ -2378,7 +2378,7 @@ end
         end
     end
 
-    function calculateChannelSpectrogram
+    function [y, f] = calculateChannelSpectrogram(traces)
         SpecWindow = 2^floor(log2(UI.settings.my_spectrograms.window * ephys.sr));
         % SpecWindow = round(ephys.sr*UI.settings.channel_spectrogram.window);
         nFFT = SpecWindow * 2;
@@ -2392,14 +2392,14 @@ end
             %Whiten signal (using the common AR model computed for the first channel)
             % TODO: without parameters?
             % wx = WhitenSignal(ephys.traces(:,c), ephys.sr * 2000, 1, my_spectrogram.ARmodel);
-            wx = WhitenSignal(ephys.traces(:,c), [], [], my_spectrogram.ARmodel);
+            wx = WhitenSignal(traces(:,c), [], [], my_spectrogram.ARmodel);
                         
             %Compute PSD for WHITENED signal
-            [y(c,:), channel_spectrogram.f] = mtcsdfast(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);
+            [y(c,:), f] = mtcsdfast(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);
                     
         end
         clear wx
-        channel_spectrogram.spectrogram = log(y(UI.channelOrder, :));
+        y = log(y(UI.channelOrder, :));
         % TODO: test if channels not empty
         % TODO: should the yy order change?
         disp("Recalculated")
@@ -3035,9 +3035,11 @@ end
             uicontrol('Parent',UI.ecog.save_menu,'Style','text','String','Frame Rate:','Units','normalized','Position',[0.02 0.45 0.21 0.19],'HorizontalAlignment','left');
             UI.ecog.frame_rate = uicontrol('Parent',UI.ecog.save_menu,'Style','Edit','String',num2str(UI.settings.ecog_grid.frame_rate),'Units','normalized','Position',[0.26 0.45 0.3 0.19],'HorizontalAlignment','center','Callback',@saveEcogGrid);
             
-            uicontrol('Parent',UI.ecog.save_menu,'Style','text','String','Sample Step:','Units','normalized','Position',[0.02 0.15 0.21 0.19],'HorizontalAlignment','left');
+            UI.ecog.rate_label = uicontrol('Parent',UI.ecog.save_menu,'Style','text','String','Sample Step:','Units','normalized','Position',[0.02 0.15 0.21 0.19],'HorizontalAlignment','left');            
             %tooltip','Stream from current timepoint
             UI.ecog.sample_step = uicontrol('Parent',UI.ecog.save_menu,'Style','Edit','String',num2str(UI.settings.ecog_grid.sample_step),'Units','normalized','Position',[0.26 0.15 0.3 0.19],'HorizontalAlignment','center','Callback',@saveEcogGrid);
+            UI.ecog.refresh_interval = uicontrol('Parent',UI.ecog.save_menu,'Style','popup','String',{'1/10','1/5','1/4','1/3','1/2','1'},'value',5,'Units','normalized','Position',[0.26 0.15 0.3 0.19],'HorizontalAlignment','center', 'Callback',@saveEcogGrid,'visible','off');
+
             uicontrol('Parent',UI.ecog.save_menu,'Style','pushbutton','Units','normalized','Position',[0.68 0.05 0.29 0.29],'String','Save','Callback',@saveEcogGrid);
 
             set(UI.fig_ecog_grid,'CloseRequestFcn',@close_ecog_grid);
@@ -3085,6 +3087,10 @@ end
             UI.panel.general.speed.Value = 3;
             UI.panel.general.speed.String = UI.speed.options_sps;
             updateStreamSpeed(UI.panel.general.speed);
+
+            UI.ecog.rate_label.String = 'Sample Step:';
+            UI.ecog.sample_step.Visible = 'on';
+            UI.ecog.refresh_interval.Visible = 'off';
         else
             UI.ecog.freq_label.Visible = 'on';
             UI.ecog.freq.Visible = 'on';
@@ -3092,6 +3098,10 @@ end
             UI.panel.general.speed.String = UI.speed.options_normal;
             UI.panel.general.speed.Value = 7;
             updateStreamSpeed(UI.panel.general.speed);
+
+            UI.ecog.rate_label.String = 'Refresh Rate:';
+            UI.ecog.sample_step.Visible = 'off';
+            UI.ecog.refresh_interval.Visible = 'on';
         end
         initTraces
         uiresume(UI.fig);
@@ -3146,33 +3156,56 @@ end
                 file = UI.data.fileNameLFP;
             end
 
-            % TODO: loop to do this by chunks -> memory issues?
-            % TODO: data processing
-            save_waitbar = waitbar(0,'Loading data');
-
-            traces = LoadBinary(file,'frequency',ephys.sr,'nChannels',data.session.extracellular.nChannels,...
-                            'offset', UI.settings.ecog_grid.sample_start-1,...
-                            'samples', UI.settings.ecog_grid.sample_end-UI.settings.ecog_grid.sample_start,...
-                            'downsample',UI.settings.ecog_grid.sample_step);
             
             folder = 'NeuroScope2_data/ecog_videos';
             if ~exist(folder, 'dir')
 				mkdir(folder);
 			end
-            name = sprintf('%s/ecog-%s_t-%d-%d.avi',folder, UI.data.basename, UI.settings.ecog_grid.sample_start, UI.settings.ecog_grid.sample_end);
+
+            save_waitbar = waitbar(0,'Loading data');
+
+            % TODO: loop to do this by chunks -> memory issues?
+            % TODO: data processing
+            if UI.ecog.type.Value == 1 % Raw
+                traces = LoadBinary(file,'frequency',ephys.sr,'nChannels',data.session.extracellular.nChannels,...
+                                'offset', UI.settings.ecog_grid.sample_start-1,...
+                                'samples', UI.settings.ecog_grid.sample_end-UI.settings.ecog_grid.sample_start,...
+                                'downsample',UI.settings.ecog_grid.sample_step);
+                name = sprintf('%s/ecog-raw-%s_t-%d-%d.avi',folder, UI.data.basename, UI.settings.ecog_grid.sample_start, UI.settings.ecog_grid.sample_end);
+            else % Spectrogram
+                traces = LoadBinary(file,'frequency',ephys.sr,'nChannels',data.session.extracellular.nChannels,...
+                            'offset', UI.settings.ecog_grid.sample_start-1,...
+                            'samples', UI.settings.ecog_grid.sample_end-UI.settings.ecog_grid.sample_start);
+                name = sprintf('%s/ecog-spect-%s_t-%d-%d.avi',folder, UI.data.basename, UI.settings.ecog_grid.sample_start, UI.settings.ecog_grid.sample_end);
+                [~, freq_index] = min(abs(channel_spectrogram.f - UI.settings.ecog_grid.freq));
+            end
+
             writerObj = VideoWriter(name);
             writerObj.FrameRate = UI.settings.ecog_grid.frame_rate;
             open(writerObj);
             
             waitbar(0, save_waitbar,'Saving Video...');
             samples = size(traces, 1);
-            for i=1:samples
-                if mod(i, 10) == 0
+
+            i = 1;
+            while i <= samples
+                if UI.ecog.type.Value == 1 % Raw
+                    if mod(i, 10) == 0
+                        waitbar(i/samples, save_waitbar,'Saving Video...');
+                    end
+                    sampleEcogGrid(prov_axis, traces(i,:));
+                    i = i + 1;
+                else % Spect
                     waitbar(i/samples, save_waitbar,'Saving Video...');
+                    % Calculate Spectrogram
+                    end_i = min(samples, i+ephys.nSamples);
+                    [spect, ~] = calculateChannelSpectrogram(traces(i:end_i,:));
+                    sampleEcogGrid(prov_axis, spect(:, freq_index));
+                    i = i + round(UI.settings.ecog_grid.refresh_interval*ephys.nSamples);
                 end
-                sampleEcogGrid(prov_axis, traces(i,:));
                 writeVideo(writerObj, getframe(prov_grid));
             end
+
             waitbar(1, save_waitbar,'Video Saved');
             % close the writer object
             close(writerObj);
@@ -3200,13 +3233,20 @@ end
                 return
             end
 
-            sample_step = str2double(UI.ecog.sample_step.String);
-            if numeric_gt_0(sample_step)
-                UI.settings.ecog_grid.sample_step = sample_step;
-            else
-                UI.ecog.sample_step.String = num2str(UI.settings.ecog_grid.sample_step);
-                MsgLog('Sample step should be bigger than 0',4);
-                return
+            if UI.ecog.type.Value == 1 % Raw
+                sample_step = str2double(UI.ecog.sample_step.String);
+                if numeric_gt_0(sample_step)
+                    UI.settings.ecog_grid.sample_step = sample_step;
+                else
+                    UI.ecog.sample_step.String = num2str(UI.settings.ecog_grid.sample_step);
+                    MsgLog('Sample step should be bigger than 0',4);
+                    return
+                end
+            else % Spectr
+                c = regexp(UI.ecog.refresh_interval.String{UI.ecog.refresh_interval.Value},'[0-9]+','match');
+                numerator = str2double(c{1});
+                denominator = str2double(c{2});
+                UI.settings.ecog_grid.refresh_interval = numerator / denominator;
             end
 
             % Update epoch lines
