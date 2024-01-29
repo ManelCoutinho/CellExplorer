@@ -142,6 +142,8 @@ preferences.my_spectrograms.freq_high = 60;
 preferences.my_spectrograms.timeband = 2;
 
 % ECoG Grid
+% preferences.ecog_grid.type = 1;
+preferences.ecog_grid.freq = 25;
 preferences.ecog_grid.min = -400;
 preferences.ecog_grid.max = 400;
 preferences.ecog_grid.frame_rate = 10;

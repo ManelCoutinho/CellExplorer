@@ -1,6 +1,6 @@
 classdef Manager
 	properties (Constant)
-		DefaultSaveLocation = 'data' % Default location to save results
+		DefaultSaveLocation = 'NeuroScope2_data' % Default location to save results
 		Types = ['spect', 'tSNE', 'UMAP', 'PCA'];
 	end
 

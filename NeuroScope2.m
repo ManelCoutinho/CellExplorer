@@ -59,6 +59,8 @@ my_spectrogram.recalculateWhiten = true;
 
 channel_spectrogram = [];
 channel_spectrogram.highlighted = [];
+channel_spectrogram.spectrogram = [];
+channel_spectrogram.f = [];
 
 if isdeployed % Check for if NeuroScope2 is running as a deployed app (compiled .exe or .app for windows and mac respectively)
     if ~isempty(varargin) % If a file name is provided it will load it.
@@ -468,7 +470,7 @@ end
         % Streaming Options
         UI.panel.general.stream_options = uipanel('Parent',UI.panel.general.main,'title','Streaming Options');
         uicontrol('Parent',UI.panel.general.stream_options,'Style','text','Units','normalized','Position',[0.01 0.51 0.70 0.49],'HorizontalAlignment','left','String','Stream speed');
-        UI.speed.options_normal = {'0.01x','0.1x','0.2x','0.25x','0.33x','0.5x','1x','1.5x','2x'};
+        UI.speed.options_normal = {'0.01x','0.05x','0.1x','0.2x','0.25x','0.33x','0.5x','1x','1.5x','2x'};
         UI.speed.options_sps = {'1s','2s','5s','10s','20s'};
         UI.panel.general.speed = uicontrol('Parent',UI.panel.general.stream_options,'Style','popup','Units','normalized','Position',[0.71 0.51 0.28 0.49],'String',UI.speed.options_normal,'value',7,'Callback',@updateStreamSpeed);
         uicontrol('Parent',UI.panel.general.stream_options,'Style','text','Units','normalized','Position',[0.01 0.01 0.70 0.49],'HorizontalAlignment','left','String','Refresh rate','tooltip','Fraction of window updated in streaming mode');
@@ -840,6 +842,11 @@ end
             plotSpectrogram
         end
 
+        if (UI.settings.showChannelSpectrogram || (UI.settings.showEcogGrid && UI.ecog.type.Value == 2)) && ephys.loaded
+            calculateChannelSpectrogram;
+        end
+
+        % Ecog Grid
         if UI.settings.showEcogGrid && ephys.loaded
             plotEcogGrid
         end
@@ -2326,7 +2333,9 @@ end
             delete(UI.ecog.line);
         end
         % Plot Lines
-        UI.ecog.line = plotLines(UI.ecog.sample/ephys.sr,[0;1],'white','--',1,true);
+        if UI.ecog.type.Value == 1
+            UI.ecog.line = plotLines(UI.ecog.sample/ephys.sr,[0;1],'white','--',1,true);
+        end
         ecog_t_start = UI.settings.ecog_grid.sample_start /ephys.sr;
         ecog_t_end = UI.settings.ecog_grid.sample_end /ephys.sr;
         if isfield(UI.ecog,'line_start') && ishandle(UI.ecog.line_start)
@@ -2343,7 +2352,13 @@ end
         end        
 
         % Plot Grid
-        sampleEcogGrid(UI.ecog_grid_axis, ephys.traces(UI.ecog.sample,UI.channelOrder) / UI.settings.scalingFactor * 1000000);
+        if UI.ecog.type.Value == 1 % Raw
+            sampleEcogGrid(UI.ecog_grid_axis, ephys.traces(UI.ecog.sample,UI.channelOrder) / UI.settings.scalingFactor * 1000000);
+        else
+            % Round to closest
+            [~, index] = min(abs(channel_spectrogram.f - UI.settings.ecog_grid.freq));
+            sampleEcogGrid(UI.ecog_grid_axis, channel_spectrogram.spectrogram(:, index));
+        end
 
         % Click Highlighting
         nCols = data.session.extracellular.nElectrodeGroups;
@@ -2363,7 +2378,7 @@ end
         end
     end
 
-    function plotChannelSpectrogram
+    function calculateChannelSpectrogram
         SpecWindow = 2^floor(log2(UI.settings.my_spectrograms.window * ephys.sr));
         % SpecWindow = round(ephys.sr*UI.settings.channel_spectrogram.window);
         nFFT = SpecWindow * 2;
@@ -2371,7 +2386,6 @@ end
         TimeBand = UI.settings.my_spectrograms.timeband;
         FreqRange = [UI.settings.my_spectrograms.freq_low UI.settings.my_spectrograms.freq_high];
         y = [];
-        f = [];
 
         for c = UI.channelOrder
         
@@ -2381,20 +2395,24 @@ end
             wx = WhitenSignal(ephys.traces(:,c), [], [], my_spectrogram.ARmodel);
                         
             %Compute PSD for WHITENED signal
-            [y(c,:), f] = mtcsdfast(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);
+            [y(c,:), channel_spectrogram.f] = mtcsdfast(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);
                     
         end
         clear wx
-        y = y(UI.channelOrder, :);
+        channel_spectrogram.spectrogram = log(y(UI.channelOrder, :));
         % TODO: test if channels not empty
         % TODO: should the yy order change?
+        disp("Recalculated")
+    end
 
-        f_width = 1/size(f, 1);
-        f_norm = normalize(f,'range',get(UI.plot_channel_spectrogram_axis,'XLim') + [f_width/2 -f_width/2]);
+    function plotChannelSpectrogram
+        
+        f_width = 1/size(channel_spectrogram.f, 1);
+        f_norm = normalize(channel_spectrogram.f,'range',get(UI.plot_channel_spectrogram_axis,'XLim') + [f_width/2 -f_width/2]);
             
-        imagesc(UI.plot_channel_spectrogram_axis,'XData', f_norm, 'YData', 1:size(UI.channelOrder, 1), 'CData', y, 'HitTest','off');
+        imagesc(UI.plot_channel_spectrogram_axis,'XData', f_norm, 'YData', 1:size(UI.channelOrder, 1), 'CData', channel_spectrogram.spectrogram, 'HitTest','off');
 
-        set(UI.plot_channel_spectrogram_axis, 'clim', [prctile(y(:),1) prctile(y(:),99)]);
+        set(UI.plot_channel_spectrogram_axis, 'clim', [prctile(channel_spectrogram.spectrogram(:),1) prctile(channel_spectrogram.spectrogram(:),99)]);
         UI.plot_channel_spectrogram_axis.YDir = 'reverse';
         % display(channel([1 end]) + [-0.5 0.5]);
         % if size(UI.channelOrder, 1) <= 16
@@ -2408,9 +2426,20 @@ end
         % set(UI.plot_channel_spectrogram_axis,'xlim', FreqRange);% ,'xtick', ftick,'xticklabel', ftick)
         % set(UI.plot_channel_spectrogram_axis,'ylim', chanlim, 'ytick', chanticks, 'yticklabel', [])
         y_ticks = UI.settings.my_spectrograms.freq_ticks;
-        axis_labels = interp1(f,f_norm,y_ticks);
+        axis_labels = interp1(channel_spectrogram.f,f_norm,y_ticks);
         prov = get(UI.plot_channel_spectrogram_axis,'ylim');
+        % TODO: this labels are not exactly right
         text(UI.plot_channel_spectrogram_axis,axis_labels, (prov(2)-3)*ones(size(y_ticks)),num2str(y_ticks(:)),'FontWeight', 'Bold','color',UI.settings.primaryColor,'margin',1, 'HitTest','off','HorizontalAlignment','left','BackgroundColor',[0 0 0 0.5]);
+
+        % Lines
+        if UI.settings.showEcogGrid && UI.ecog.type.Value == 2 % Spectrogram Mode
+            if ~isempty(channel_spectrogram.highlighted)
+                delete(channel_spectrogram.highlighted);
+            end
+
+            freq = (UI.settings.ecog_grid.freq - channel_spectrogram.f(1)) / (channel_spectrogram.f(end) - channel_spectrogram.f(1));
+            channel_spectrogram.highlighted = line(UI.plot_channel_spectrogram_axis,[freq,freq],get(UI.plot_channel_spectrogram_axis,'YLim'),'color',[.5 .5 .5], 'LineStyle', '--', 'HitTest','off','linewidth',2);
+        end
     end
 
     function plotMySpectrogram
@@ -2462,9 +2491,6 @@ end
                 [my_spectrogram.y, my_spectrogram.f, my_spectrogram.t] = mtcsglong(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);
                 my_spectrogram.recalculateSpectrogram = false;
             end
-            % disp(my_spectrogram.f);
-            % display(size(y)); %- 8; 81            
-            % display(size(t)); %- 8; 1
             % scaling = 200;
             % image(UI.plot_axis1,'XData',t,'YData',multiplier,'CData',scaling*log10(abs(s)), 'HitTest','off');
             % text(UI.plot_axis1,t(1)*ones(size(y_ticks)),axis_labels,num2str(y_ticks(:)),'FontWeight', 'Bold','color',UI.settings.primaryColor,'margin',1, 'HitTest','off','HorizontalAlignment','left','BackgroundColor',[0 0 0 0.5]);
@@ -2508,6 +2534,15 @@ end
             % caxis([-5 0.5*max(a(:)) ]);
             % clear a
             %------------------------------------------------------------------------------------%
+
+            if UI.settings.showEcogGrid && UI.ecog.type.Value == 2 % Spectrogram Mode
+                if ~isempty(my_spectrogram.highlighted)
+                    delete(my_spectrogram.highlighted);
+                end
+    
+                freq = (UI.settings.ecog_grid.freq - my_spectrogram.f(1)) / (my_spectrogram.f(end) - my_spectrogram.f(1));
+                my_spectrogram.highlighted = line(UI.plot_spectrogram_axis,get(UI.plot_spectrogram_axis,'XLim'),[freq,freq],'color',[.5 .5 .5], 'LineStyle', '--', 'HitTest','off','linewidth',2);
+            end
         end
     end
     
@@ -2971,20 +3006,26 @@ end
 
             UI.menu.display.showEcogGrid.Checked = 'on';
             
-            UI.fig_ecog_grid = figure('Name','ECoG Grid','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter','none','DefaultLegendInterpreter','none','MenuBar','None','Position',[0, 0, 450, 560]);
+            UI.fig_ecog_grid = figure('Name','ECoG Grid','NumberTitle','off','renderer','opengl','DefaultAxesLooseInset',[.01,.01,.01,.01],'visible','off','DefaultTextInterpreter','none','DefaultLegendInterpreter','none','MenuBar','None','Position',[0, 0, 480, 590]);
             movegui(UI.fig_ecog_grid,'northeast'), set(UI.fig_ecog_grid,'visible','on')
 
-            UI.ecog_grid_axis = axes('Parent', UI.fig_ecog_grid,'OuterPosition',[0.05 0.3 0.90 0.69],'Clipping','off','ButtonDownFcn',@ClickEcogGrid);
+            UI.ecog_grid_axis = axes('Parent', UI.fig_ecog_grid,'OuterPosition',[0.05 0.33 0.90 0.66],'Clipping','off','ButtonDownFcn',@ClickEcogGrid);
             
+            % Type:
+            uicontrol('Parent',UI.fig_ecog_grid,'Style','text','String','Type:','Units','normalized','Position',[0.05 0.275 0.08 0.04],'HorizontalAlignment','left');
+            UI.ecog.type = uicontrol('Parent',UI.fig_ecog_grid,'Style','popup','String',{'Raw','Spectrogram'},'value',1,'Units','normalized','Position', [0.14 0.28 0.195 0.04],'HorizontalAlignment','left','Callback',@setEcogType);
+            UI.ecog.freq_label = uicontrol('Parent',UI.fig_ecog_grid,'Style','text','String','Freq (Hz):','Units','normalized','Position',[0.58 0.275 0.14 0.04],'HorizontalAlignment','left','visible','off');
+            UI.ecog.freq = uicontrol('Parent',UI.fig_ecog_grid,'Style','Edit','String',num2str(UI.settings.ecog_grid.freq),'Units','normalized','Position',[0.72 0.28 0.20 0.04],'HorizontalAlignment','center', 'visible','off','Callback',@checkEcogGridFreq);
+
             % Limits
-            UI.ecog.fixLimits = uicontrol('Parent',UI.fig_ecog_grid,'Style','checkbox','String','Fixed Limits','value',0,'Units','normalized','Position',[0.05 0.24 0.20 0.04],'HorizontalAlignment','left','Callback',@setEcogLimits);
-            uicontrol('Parent',UI.fig_ecog_grid,'Style','text','String','Min:','Units','normalized','Position',[0.29 0.235 0.07 0.04],'HorizontalAlignment','left');
-            UI.ecog.min = uicontrol('Parent',UI.fig_ecog_grid,'Style','Edit','String',num2str(UI.settings.ecog_grid.min),'Units','normalized','Position',[0.37 0.24 0.20 0.04],'Enable','off','HorizontalAlignment','center','Callback',@setEcogLimits);
-            uicontrol('Parent',UI.fig_ecog_grid,'Style','text','String','Max:','Units','normalized','Position',[0.60 0.235 0.07 0.04],'HorizontalAlignment','left');
-            UI.ecog.max = uicontrol('Parent',UI.fig_ecog_grid,'Style','Edit','String',num2str(UI.settings.ecog_grid.max),'Units','normalized','Position',[0.68 0.24 0.20 0.04],'Enable','off','HorizontalAlignment','center','Callback',@setEcogLimits);
+            UI.ecog.fixLimits = uicontrol('Parent',UI.fig_ecog_grid,'Style','checkbox','String','Fixed Limits','value',0,'Units','normalized','Position',[0.05 0.23 0.20 0.04],'HorizontalAlignment','left','Callback',@setEcogLimits);
+            uicontrol('Parent',UI.fig_ecog_grid,'Style','text','String','Min:','Units','normalized','Position',[0.34 0.225 0.07 0.04],'HorizontalAlignment','left');
+            UI.ecog.min = uicontrol('Parent',UI.fig_ecog_grid,'Style','Edit','String',num2str(UI.settings.ecog_grid.min),'Units','normalized','Position',[0.42 0.23 0.20 0.04],'Enable','off','HorizontalAlignment','center','Callback',@setEcogLimits);
+            uicontrol('Parent',UI.fig_ecog_grid,'Style','text','String','Max:','Units','normalized','Position',[0.64 0.225 0.07 0.04],'HorizontalAlignment','left');
+            UI.ecog.max = uicontrol('Parent',UI.fig_ecog_grid,'Style','Edit','String',num2str(UI.settings.ecog_grid.max),'Units','normalized','Position',[0.72 0.23 0.20 0.04],'Enable','off','HorizontalAlignment','center','Callback',@setEcogLimits);
 
             % Save
-            UI.ecog.save_menu = uipanel('Parent',UI.fig_ecog_grid,'title','Export','Units','normalized','Position',[0.04 0.01 0.86 0.23]);
+            UI.ecog.save_menu = uipanel('Parent',UI.fig_ecog_grid,'title','Export','Units','normalized','Position',[0.04 0.01 0.90 0.21]);
             uicontrol('Parent',UI.ecog.save_menu,'Style','text','String','Start:','Units','normalized','Position',[0.02 0.75 0.1 0.19],'HorizontalAlignment','left');
             UI.ecog.sample_start = uicontrol('Parent',UI.ecog.save_menu,'Style','Edit','String',num2str(UI.settings.ecog_grid.sample_start),'Units','normalized','Position',[0.13 0.75 0.36 0.19],'HorizontalAlignment','center','Callback',@saveEcogGrid);
             
@@ -2992,19 +3033,21 @@ end
             UI.ecog.sample_end = uicontrol('Parent',UI.ecog.save_menu,'Style','Edit','String',num2str(UI.settings.ecog_grid.sample_end),'Units','normalized','Position',[0.63 0.75 0.36 0.19],'HorizontalAlignment','center','Callback',@saveEcogGrid);
             
             uicontrol('Parent',UI.ecog.save_menu,'Style','text','String','Frame Rate:','Units','normalized','Position',[0.02 0.45 0.21 0.19],'HorizontalAlignment','left');
-            UI.ecog.frame_rate = uicontrol('Parent',UI.ecog.save_menu,'Style','Edit','String',num2str(UI.settings.ecog_grid.frame_rate),'Units','normalized','Position',[0.25 0.45 0.3 0.19],'HorizontalAlignment','center','Callback',@saveEcogGrid);
+            UI.ecog.frame_rate = uicontrol('Parent',UI.ecog.save_menu,'Style','Edit','String',num2str(UI.settings.ecog_grid.frame_rate),'Units','normalized','Position',[0.26 0.45 0.3 0.19],'HorizontalAlignment','center','Callback',@saveEcogGrid);
             
             uicontrol('Parent',UI.ecog.save_menu,'Style','text','String','Sample Step:','Units','normalized','Position',[0.02 0.15 0.21 0.19],'HorizontalAlignment','left');
             %tooltip','Stream from current timepoint
-            UI.ecog.sample_step = uicontrol('Parent',UI.ecog.save_menu,'Style','Edit','String',num2str(UI.settings.ecog_grid.sample_step),'Units','normalized','Position',[0.25 0.15 0.3 0.19],'HorizontalAlignment','center','Callback',@saveEcogGrid);
+            UI.ecog.sample_step = uicontrol('Parent',UI.ecog.save_menu,'Style','Edit','String',num2str(UI.settings.ecog_grid.sample_step),'Units','normalized','Position',[0.26 0.15 0.3 0.19],'HorizontalAlignment','center','Callback',@saveEcogGrid);
             uicontrol('Parent',UI.ecog.save_menu,'Style','pushbutton','Units','normalized','Position',[0.68 0.05 0.29 0.29],'String','Save','Callback',@saveEcogGrid);
 
             set(UI.fig_ecog_grid,'CloseRequestFcn',@close_ecog_grid);
             UI.ecog.sample = round(size(ephys.traces, 1) / 2);
             
-            UI.panel.general.speed.Value = 3;
-            UI.panel.general.speed.String = UI.speed.options_sps;
-            updateStreamSpeed(UI.panel.general.speed);
+            if UI.ecog.type.Value == 1 % Raw
+                UI.panel.general.speed.Value = 3;
+                UI.panel.general.speed.String = UI.speed.options_sps;
+                updateStreamSpeed(UI.panel.general.speed);
+            end
         else
             close_ecog_grid(UI.fig_ecog_grid);
         end
@@ -3030,6 +3073,57 @@ end
         else
             UI.ecog.min.Enable = 'off';
             UI.ecog.max.Enable = 'off';
+        end
+        plotEcogGrid;
+    end
+
+    function setEcogType(~,~)
+        if UI.ecog.type.Value == 1
+            UI.ecog.freq_label.Visible = 'off';
+            UI.ecog.freq.Visible = 'off';
+
+            UI.panel.general.speed.Value = 3;
+            UI.panel.general.speed.String = UI.speed.options_sps;
+            updateStreamSpeed(UI.panel.general.speed);
+        else
+            UI.ecog.freq_label.Visible = 'on';
+            UI.ecog.freq.Visible = 'on';
+
+            UI.panel.general.speed.String = UI.speed.options_normal;
+            UI.panel.general.speed.Value = 7;
+            updateStreamSpeed(UI.panel.general.speed);
+        end
+        initTraces
+        uiresume(UI.fig);
+    end
+
+    function checkEcogGridFreq(~, ~)
+        numeric_gt_0 = @(n) ~isempty(n) && isnumeric(n) && (n > 0);
+        ecog_grid_freq = str2double(UI.ecog.freq.String);
+        if numeric_gt_0(ecog_grid_freq) && ecog_grid_freq <= UI.settings.my_spectrograms.freq_high
+            UI.settings.ecog_grid.freq = ecog_grid_freq;
+        else
+            UI.ecog.freq.String = num2str(UI.settings.ecog_grid.freq);
+            MsgLog("Frequency is not valid.",4);
+            return
+        end
+
+        % Draw new lines
+        if UI.settings.showChannelSpectrogram
+            if ~isempty(channel_spectrogram.highlighted)
+                delete(channel_spectrogram.highlighted);
+            end
+
+            freq = (UI.settings.ecog_grid.freq - channel_spectrogram.f(1)) / (channel_spectrogram.f(end) - channel_spectrogram.f(1));
+            channel_spectrogram.highlighted = line(UI.plot_channel_spectrogram_axis,[freq,freq],get(UI.plot_channel_spectrogram_axis,'YLim'),'color',[.5 .5 .5], 'LineStyle', '--', 'HitTest','off','linewidth',2);
+        end
+        if UI.settings.showMySpectrogram
+            if ~isempty(my_spectrogram.highlighted)
+                delete(my_spectrogram.highlighted);
+            end
+
+            freq = (UI.settings.ecog_grid.freq - my_spectrogram.f(1)) / (my_spectrogram.f(end) - my_spectrogram.f(1));
+            my_spectrogram.highlighted = line(UI.plot_spectrogram_axis,get(UI.plot_spectrogram_axis,'XLim'),[freq,freq],'color',[.5 .5 .5], 'LineStyle', '--', 'HitTest','off','linewidth',2);
         end
         plotEcogGrid;
     end
@@ -3061,7 +3155,7 @@ end
                             'samples', UI.settings.ecog_grid.sample_end-UI.settings.ecog_grid.sample_start,...
                             'downsample',UI.settings.ecog_grid.sample_step);
             
-            folder = 'data/ecog_videos';
+            folder = 'NeuroScope2_data/ecog_videos';
             if ~exist(folder, 'dir')
 				mkdir(folder);
 			end
@@ -3549,14 +3643,14 @@ end
             UI.settings.fileRead = 'bof';
             UI.buttons.play1.String = [char(9646) char(9646)];
             UI.elements.lower.performance.String = '  Streaming...';
-    
-            if UI.settings.showEcogGrid
+
+            if UI.settings.showEcogGrid && UI.ecog.type.Value == 1 % Raw
                 UI.streamingText = text(UI.plot_axis1,UI.settings.windowDuration/2,1,'Streaming','FontWeight', 'Bold','VerticalAlignment', 'top','HorizontalAlignment','center','color',UI.settings.primaryColor,'HitTest','off');
             end
     
             while UI.settings.stream
                 streamTic = tic;
-                if UI.settings.showEcogGrid
+                if UI.settings.showEcogGrid && UI.ecog.type.Value == 1 % Raw
                     while UI.settings.stream && UI.ecog.sample < size(ephys.traces, 1)
                         streamEcogTic = tic;
                         UI.ecog.sample = UI.ecog.sample + 1;
@@ -3615,8 +3709,8 @@ end
                 if UI.settings.debug
                     drawnow
                 end
-    
-                if ~UI.settings.showEcogGrid
+                
+                if ~(UI.settings.showEcogGrid && UI.ecog.type.Value == 1) % Raw
                     streamToc = toc(streamTic);
                     pauseBins = ones(1,10) * ((UI.settings.replayRefreshInterval / UI.settings.streamSpeed*UI.settings.windowDuration-streamToc)*0.1);
                     pauseBins(cumsum(pauseBins)-streamToc<0) = [];
@@ -3631,7 +3725,7 @@ end
                 end
             end
 
-            if UI.settings.showEcogGrid && ended
+            if UI.settings.showEcogGrid && UI.ecog.type.Value == 1 && ended
                 UI.settings.stream = true;
                 while UI.settings.stream && UI.ecog.sample < size(ephys.traces, 1)
                     streamEcogTic = tic;
@@ -6133,6 +6227,17 @@ end
                 if UI.settings.showChannelSpectrogram
                     channel_spectrogram.highlighted = line(UI.plot_channel_spectrogram_axis,[freq,freq],get(UI.plot_channel_spectrogram_axis,'YLim'),'color',[.5 .5 .5], 'LineStyle', '--', 'HitTest','off','linewidth',2);
                 end
+
+                scaledFreq = linspace(0, 1, length(my_spectrogram.f));
+                [~, index] = min(abs(scaledFreq - freq));
+                ecog_grid_freq = my_spectrogram.f(index);
+                if ecog_grid_freq ~= UI.settings.ecog_grid.freq
+                    UI.settings.ecog_grid.freq = ecog_grid_freq;
+                    UI.ecog.freq.String = num2str(UI.settings.ecog_grid.freq);
+                    if UI.settings.showEcogGrid && UI.ecog.type.Value == 2 % Spectrogram Mode
+                        plotEcogGrid;
+                    end
+                end  
             otherwise
         end
     end
@@ -6177,6 +6282,24 @@ end
                 if UI.settings.showMySpectrogram
                     my_spectrogram.highlighted = line(UI.plot_spectrogram_axis,get(UI.plot_spectrogram_axis,'XLim'),[freq,freq],'color',[.5 .5 .5], 'LineStyle', '--', 'HitTest','off','linewidth',2);
                 end
+
+                % Round to closest
+                scaledFreq = linspace(0, 1, length(channel_spectrogram.f));
+                [~, index] = min(abs(scaledFreq - freq));
+                
+                % Round down
+                % relativePos = freq * (length(channel_spectrogram.f) - 1) + 1;
+                % index = floor(relativePos);
+                % index = max(1, min(index, length(channel_spectrogram.f)));
+
+                ecog_grid_freq = channel_spectrogram.f(index);
+                if ecog_grid_freq ~= UI.settings.ecog_grid.freq
+                    UI.settings.ecog_grid.freq = ecog_grid_freq;
+                    UI.ecog.freq.String = num2str(UI.settings.ecog_grid.freq);
+                    if UI.settings.showEcogGrid && UI.ecog.type.Value == 2 % Spectrogram Mode
+                        plotEcogGrid;
+                    end
+                end                
             otherwise
         end
     end
@@ -6243,7 +6366,7 @@ end
                     if polygon1.counter > 1
                         set(polygon1.handle2(polygon1.counter-1),'Visible','off');
                     end
-                elseif UI.settings.showEcogGrid
+                elseif UI.settings.showEcogGrid && UI.ecog.type.Value == 1
                     if t_click >= UI.t0 && t_click <= (UI.t0 + UI.settings.windowDuration)
                         UI.ecog.sample = round((t_click - UI.t0) * ephys.sr);
                         UI.elements.lower.performance.String = ['Cursor: ',num2str(t_click),' sec'];
@@ -6574,7 +6697,7 @@ end
     end
 
     function updateStreamSpeed(src,~)
-        if UI.settings.showEcogGrid
+        if UI.settings.showEcogGrid && UI.ecog.type.Value == 1
             UI.settings.samplesPerSecond = str2double(src.String{src.Value}(1:end-1));
         else
             UI.settings.streamSpeed = str2double(src.String{src.Value}(1:end-1));
