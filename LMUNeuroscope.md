@@ -52,8 +52,8 @@ There are 2 main ways of running the script:
 ![ChannelSpectrogram](https://github.com/ManelCoutinho/CellExplorer/assets/37669762/54cb8292-fe03-47ff-978d-e3bc7630c1e5)
 
 **Description**:  
-Shows a channel spectrogram of the visible ephys traces on their right side in the same order as they are shown. The power of the spectrogram is in the logarithmic scale.  
-
+Shows a channel spectrogram of the visible ephys traces on their right side in the same order as they are shown. You can choose between logarithmic and linear scale for the power of the spectrogram.  
+  
 **Location**:  
 Analysis Tab &rarr; Improved Spectrograms Section &rarr; 1st checkbox   
 ![ChannelSpectrogramLoc](https://github.com/ManelCoutinho/CellExplorer/assets/37669762/12dc45f4-2b74-44ef-ace9-1c7a558ef079)
@@ -68,7 +68,7 @@ _Right Click_ highlights a frequency with a vertical line. If the [Improved Spec
 ![ImprovedSpectrogram](https://github.com/ManelCoutinho/CellExplorer/assets/37669762/e0b6a6da-ff4f-47d7-afff-2cd0a0550e19)
 
 **Description**:  
-Shows the spectrogram of the selected channel below the ephys traces for the current window. The power of the spectrogram is in the logarithmic scale.  
+Shows the spectrogram of the selected channel below the ephys traces for the current window. You can choose between logarithmic and linear scale for the power of the spectrogram.  
 
 **Location**:  
 Analysis Tab &rarr; Improved Spectrograms Section &rarr; 2nd checkbox   
@@ -107,7 +107,7 @@ Menu Bar &rarr; Settings Option &rarr; Show ECoG Grid
 **Interaction**:  
 _Left Mouse Click_ selects the corresponding channel and highlights both in this plot and the main ephys traces plot. This will also change the channel selected for the [Improved Spectrogram](#improved-spectrogram).   
 The sample being plotted can be changed by left-clicking on the ephys traces, while the frequency by right-clicking on either of the explained spectrograms (or entering an approximate number in the appropriate box).   
-You can use the options to set a fixed scale for the ECoG grid, choose between the two modes, or export a video of a defined interval with the desired frame rate, sample step (or refresh rate),...
+You can use the options to set a fixed scale for the ECoG grid, choose between the two modes, or export a video of a defined interval with the desired frame rate, sample step (or refresh rate),... - while the other refresh rate options are based on the main plot window, the ```Default``` is based on the overlap used to calculate the spectrogram.
 
 > **⚠ Warning:**  
 > The frequency entered in the input area won't be exact since the spectrogram doesn't sample every frequency point between the specified limits. For the exact frequency being chosen, select them with your mouse in one of the ways described above.
