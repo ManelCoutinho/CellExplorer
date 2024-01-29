@@ -2401,12 +2401,11 @@ end
         clear wx
         y = log(y(UI.channelOrder, :));
         % TODO: test if channels not empty
-        % TODO: should the yy order change?
-        disp("Recalculated")
     end
 
     function plotChannelSpectrogram
-        
+        % TODO: should the yy order change?
+
         f_width = 1/size(channel_spectrogram.f, 1);
         f_norm = normalize(channel_spectrogram.f,'range',get(UI.plot_channel_spectrogram_axis,'XLim') + [f_width/2 -f_width/2]);
             
