@@ -953,7 +953,7 @@ end
         end
         
         if ~isempty(UI.legend)
-            text(1/400,0.005,UI.legend,'FontWeight', 'Bold','BackgroundColor',UI.settings.textBackground,'VerticalAlignment', 'bottom','Units','normalized','HorizontalAlignment','left','HitTest','off','Interpreter','tex')
+            text(UI.plot_axis1,1/400,0.005,UI.legend,'FontWeight', 'Bold','BackgroundColor',UI.settings.textBackground,'VerticalAlignment', 'bottom','Units','normalized','HorizontalAlignment','left','HitTest','off','Interpreter','tex')
         end
     end
     
@@ -2700,7 +2700,7 @@ end
                     if any(idx)
                         statesData = states1.(stateNames{jj})(idx,:)-t1;
                         statesData(statesData<0) = 0; statesData(statesData>t2-t1) = t2-t1;
-                        p1 = patch(double([statesData,flip(statesData,2)])',[UI.dataRange.states(1);UI.dataRange.states(1);UI.dataRange.states(2);UI.dataRange.states(2)]*ones(1,size(statesData,1)),clr_states(jj,:),'EdgeColor',clr_states(jj,:),'HitTest','off');
+                        p1 = patch(UI.plot_axis1, double([statesData,flip(statesData,2)])',[UI.dataRange.states(1);UI.dataRange.states(1);UI.dataRange.states(2);UI.dataRange.states(2)]*ones(1,size(statesData,1)),clr_states(jj,:),'EdgeColor',clr_states(jj,:),'HitTest','off');
                         alpha(p1,0.3);
                         addLegend(stateNames{jj},clr_states(jj,:)*0.8);
                     else
