@@ -197,6 +197,7 @@ You have to add the following packages to compile NeuroScope2:
 - [ ] Saving ECoG limits selection with mouse
 - [ ] Improve performance
 - [ ] Refactor main NeuroScope2.m file
+- [ ] Fix streaming from end (and loading)
 
 ## Troubleshooting
 ### Missing Function Problem

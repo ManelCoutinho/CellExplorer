@@ -1004,17 +1004,42 @@ end
             return
         elseif UI.settings.plotStyle == 6
             fileID = UI.fid.ephys;
-        else % dat file
-            if UI.fid.ephys == -1
-                UI.settings.stream = false;
-                ephys.loaded = false;
-                text_center('Failed to load raw data')
-                return
+        else % 
+            if ~isempty(dir(UI.data.fileNameLFP)) && strcmp(UI.priority,'lfp')
+                if UI.fid.lfp == -1
+                    UI.settings.stream = false;
+                    ephys.loaded = false;
+                    text_center('Failed to load LFP data')
+                    return
+                end
+                fileID = UI.fid.lfp;
+            else
+                if UI.fid.ephys == -1
+                    UI.settings.stream = false;
+                    ephys.loaded = false;
+                    text_center('Failed to load raw data')
+                    return
+                end
+                fileID = UI.fid.ephys;
             end
-            fileID = UI.fid.ephys;
         end
         
         if strcmp(UI.settings.fileRead,'bof')
+            channelList = [UI.channels{UI.settings.electrodeGroupsToPlot}];
+            totalChannels = 1:data.session.extracellular.nChannels;
+            channelsToHide = setdiff(totalChannels, channelList);
+            if ~isempty(channelsToHide)
+                ephys.raw(:, channelsToHide) = NaN;
+            end
+                   
+            if isfield(ephys, 'raw')
+                nanChannels = find(all(isnan(ephys.raw), 1));
+                newChannels = setdiff(channelList, nanChannels);
+                if ~isempty(newChannels)
+                    UI.forceNewData = true;
+                end
+            end
+            
             % Loading data
             if UI.t0>UI.t1 && UI.t0 < UI.t1 + UI.settings.windowDuration && ~UI.forceNewData
                 t_offset = UI.t0-UI.t1;
@@ -1023,9 +1048,9 @@ end
                 % Keeping existing samples
                 ephys.raw(1:existingSamples,:) = ephys.raw(newSamples+1:UI.samplesToDisplay,:);
                 % Loading new samples
-                fseek(fileID,round((UI.t0+UI.settings.windowDuration-t_offset)*ephys.sr)*data.session.extracellular.nChannels*2,'bof'); % bof: beginning of file
+                start_sample = round((UI.t0+UI.settings.windowDuration-t_offset)*ephys.sr);
                 try
-                    ephys.raw(existingSamples+1:UI.samplesToDisplay,:) = double(fread(fileID, [data.session.extracellular.nChannels, newSamples],UI.settings.precision))'*UI.settings.leastSignificantBit;
+                    ephys.raw(existingSamples+1:UI.samplesToDisplay,channelList) = double(UI.mmap.Data.x(channelList,start_sample+1:start_sample+newSamples))'*UI.settings.leastSignificantBit;
                     ephys.loaded = true;
                 catch 
                     UI.settings.stream = false;
@@ -1036,16 +1061,16 @@ end
                 newSamples = round(UI.samplesToDisplay*t_offset/UI.settings.windowDuration);
                 % Keeping existing samples
                 existingSamples = UI.samplesToDisplay-newSamples;
-                ephys.raw(newSamples+1:UI.samplesToDisplay,:) = ephys.raw(1:existingSamples,:);
+                ephys.raw(newSamples+1:UI.samplesToDisplay,channelList) = ephys.raw(1:existingSamples,:);
                 % Loading new data
-                fseek(fileID,round(UI.t0*ephys.sr)*data.session.extracellular.nChannels*2,'bof');
-                ephys.raw(1:newSamples,:) = double(fread(fileID, [data.session.extracellular.nChannels, newSamples],UI.settings.precision))'*UI.settings.leastSignificantBit;
+                start_sample = round(UI.t0*ephys.sr);
+                ephys.raw(1:newSamples,channelList) = double(UI.mmap.Data.x(channelList,start_sample+1:start_sample+newSamples))'*UI.settings.leastSignificantBit;
                 ephys.loaded = true;
             elseif UI.t0==UI.t1 && ~UI.forceNewData
                 ephys.loaded = true;
             else
-                fseek(fileID,round(UI.t0*ephys.sr)*data.session.extracellular.nChannels*2,'bof');
-                ephys.raw = double(fread(fileID, [data.session.extracellular.nChannels, UI.samplesToDisplay],UI.settings.precision))'*UI.settings.leastSignificantBit;
+                start_sample = round(UI.t0*ephys.sr);
+                ephys.raw(:,channelList) = double(UI.mmap.Data.x(channelList,start_sample+1:start_sample+UI.samplesToDisplay))' * UI.settings.leastSignificantBit;
                 ephys.loaded = true;
             end
             UI.forceNewData = false;
@@ -1254,7 +1279,7 @@ end
         
         if ~isempty(UI.settings.channelTags.highlight)
             for i = 1:numel(UI.settings.channelTags.highlight)
-                channels = data.session.channelTags.(UI.channelTags{UI.settings.channelTags.highlight(i)}).channels;
+                channels = data.session.channelTags.(UI.channelTags{UI.settings.channelTags.highlight(i)}).channels;     
                 if ~isempty(channels)
                     channels = UI.channelMap(channels); channels(channels==0) = [];
                     if ~isempty(channels) && any(ismember(channels,UI.channelOrder))
@@ -2389,15 +2414,13 @@ end
         y = [];
 
         for c = UI.channelOrder
-        
             %Whiten signal (using the common AR model computed for the first channel)
             % TODO: without parameters?
             % wx = WhitenSignal(ephys.traces(:,c), ephys.sr * 2000, 1, my_spectrogram.ARmodel);
             wx = WhitenSignal(traces(:,c), [], [], my_spectrogram.ARmodel);
                         
             %Compute PSD for WHITENED signal
-            [y(c,:), f] = mtcsdfast(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);
-                    
+            [y(c,:), f] = mtcsdfast(wx, nFFT, ephys.sr, SpecWindow, noverlap, TimeBand, 'linear', [], FreqRange);                    
         end
         clear wx
         if UI.panel.my_spectrograms.log.Value == 1
@@ -2419,13 +2442,8 @@ end
         set(UI.plot_channel_spectrogram_axis, 'clim', [prctile(channel_spectrogram.spectrogram(:),1) prctile(channel_spectrogram.spectrogram(:),99)]);
         UI.plot_channel_spectrogram_axis.YDir = 'reverse';
         % display(channel([1 end]) + [-0.5 0.5]);
-        % if size(UI.channelOrder, 1) <= 16
-        %     chanticks = [1:size(UI.channelOrder, 1)];
-        % else
-        %     chanticks = [1:2:size(UI.channelOrder, 1)];
-        % end
-        [minY, maxY] = bounds(UI.channelOrder);
-        set(UI.plot_channel_spectrogram_axis,'ylim', [minY-0.5 maxY+0.5] );%, 'ytick', chanticks,'yticklabel', []);
+        % [minY, maxY] = bounds(UI.channelOrder);
+        % set(UI.plot_channel_spectrogram_axis,'ylim', [minY-0.5 maxY+0.5] );%, 'ytick', chanticks,'yticklabel', []);
         % ftick = FreqRange(1) : 5 : FreqRange(2);
         % set(UI.plot_channel_spectrogram_axis,'xlim', FreqRange);% ,'xtick', ftick,'xticklabel', ftick)
         % set(UI.plot_channel_spectrogram_axis,'ylim', chanlim, 'ytick', chanticks, 'yticklabel', [])
@@ -4888,6 +4906,7 @@ end
                     brainRegions = fieldnames(data.session.brainRegions);
                     UI.settings.brainRegionsToHide = brainRegions(~UI.table.brainRegions.Data{:,1});
                     initTraces;
+                    load_ephys_data;
                     uiresume(UI.fig);
                 end
             case 'All'
@@ -4902,6 +4921,7 @@ end
                     brainRegions = fieldnames(data.session.brainRegions);
                     UI.settings.brainRegionsToHide = brainRegions(~UI.table.brainRegions.Data{:,1});
                     initTraces;
+                    load_ephys_data;
                     uiresume(UI.fig);
                 elseif UI.uitabgroup_channels.Selection == 4 && isfield(data.session.extracellular,'chanCoords') && ~isempty(data.session.extracellular.chanCoords.x) && ~isempty(data.session.extracellular.chanCoords.y)
                     image_toolbox_installed = isToolboxInstalled('Image Processing Toolbox');
@@ -4936,11 +4956,11 @@ end
                 end
                 answer = inputdlg({'Tag name (e.g. Bad, Ripple, Theta)','Channels','Groups'},'Add channel tag', [1 50; 1 50; 1 50],{'',selectedChannels,''});
                 if ~isempty(answer) && ~strcmp(answer{1},'') && isvarname(answer{1}) && (~isfield(data.session,'channelTags') || ~ismember(answer{1},fieldnames(data.session.channelTags)))
-                    if ~isempty(answer{2}) && isnumeric(str2double(answer{2})) && all(str2double(answer{2})>0)
-                        data.session.channelTags.(answer{1}).channels = str2double(answer{2});
+                    if ~isempty(answer{2}) && isnumeric(str2num(answer{2})) && all(str2num(answer{2})>0)
+                        data.session.channelTags.(answer{1}).channels = str2num(answer{2});
                     end
-                    if ~isempty(answer{3}) && isnumeric(str2double(answer{3})) && all(str2double(answer{3})>0)
-                        data.session.channelTags.(answer{1}).electrodeGroups = str2double(answer{3});
+                    if ~isempty(answer{3}) && isnumeric(str2num(answer{3})) && all(str2num(answer{3})>0)
+                        data.session.channelTags.(answer{1}).electrodeGroups = str2num(answer{3});
                     end
                     updateChannelTags
                     uiresume(UI.fig);
@@ -5151,7 +5171,7 @@ end
             end
 
             disp('Loading New Channel');
-            ephys.full = LoadBinary(file, 'frequency', ephys.sr, 'channels', UI.settings.my_spectrograms.channel, 'nChannels', data.session.extracellular.nChannels);
+            ephys.full = UI.mmap.Data.x(UI.settings.my_spectrograms.channel,:)';
         % TODO: check if free it or hold in memory
         % elseif UI.panel.my_spectrograms.fullSpectrogram.Value == 0 && ~isempty(ephys.full)
         %     ephys.full = [];
@@ -5308,7 +5328,8 @@ end
     
                 % Channel to use
                 channelnumber = str2double(UI.panel.my_spectrograms.spectrogramChannel.String);
-                if numeric_gt_0(channelnumber) && channelnumber<=data.session.extracellular.nChannels
+                channelList = [UI.channels{UI.settings.electrodeGroupsToPlot}];
+                if numeric_gt_0(channelnumber) && ismember(channelnumber, channelList)
                     UI.settings.my_spectrograms.channel = channelnumber;
                     UI.settings.showMySpectrogram = true;
                     if channelnumber ~= my_spectrogram.channel
@@ -5772,7 +5793,7 @@ end
             if UI.settings.showChannelNumbers
                 electrodegroup_spacing = 0.13;
             else
-                    electrodegroup_spacing = 0.03;
+                electrodegroup_spacing = 0.03;
             end
             UI.settings.columns = numel(UI.settings.electrodeGroupsToPlot)+numel(UI.settings.electrodeGroupsToPlot)*electrodegroup_spacing;
             for i = 1:length(UI.settings.electrodeGroupsToPlot)
@@ -6010,8 +6031,7 @@ end
         elseif strcmpi(UI.priority,'lfp')
             UI.settings.plotStyle = 4;
             UI.panel.general.plotStyle.Value = UI.settings.plotStyle;
-        end
-        
+        end        
         if UI.srLfp
             sr = data.session.extracellular.srLfp;
         else
@@ -6022,10 +6042,11 @@ end
             filesize = s1.bytes;
             UI.t_total = filesize/(data.session.extracellular.nChannels*sr*2);
 
-            ephys.full = LoadBinary(UI.data.fileName, 'frequency', sr, 'channels', my_spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
+            nSamples = floor((filesize/data.session.extracellular.nChannels/datatypesize(UI.settings.precision)));
+            UI.mmap = memmapfile(UI.data.fileName, 'format',{UI.settings.precision [data.session.extracellular.nChannels nSamples] 'x'},'offset', 0, 'repeat',1);
+            ephys.full = UI.mmap.Data.x(my_spectrogram.channel,:)';
             % TODO: decide parameters
             [~, my_spectrogram.ARmodel] = WhitenSignal(ephys.full, sr * 2000, 1);
-
         elseif ~isempty(s2)
             UI.priority = 'lfp';
             filesize = s2.bytes;
@@ -6033,7 +6054,9 @@ end
             UI.settings.plotStyle = 4;
             UI.panel.general.plotStyle.Value = UI.settings.plotStyle;
 
-            ephys.full = LoadBinary(UI.data.fileNameLFP, 'frequency', sr, 'channels', my_spectrogram.channel, 'nChannels', data.session.extracellular.nChannels);
+            nSamples = floor((filesize/data.session.extracellular.nChannels/datatypesize(UI.settings.precision)));
+            UI.mmap = memmapfile(UI.data.fileNameLFP, 'format',{UI.settings.precision [data.session.extracellular.nChannels nSamples] 'x'},'offset', 0, 'repeat',1);
+            ephys.full = UI.mmap.Data.x(my_spectrogram.channel,:)';
             % TODO: decide parameters
             [~, my_spectrogram.ARmodel] = WhitenSignal(ephys.full, sr * 2000, 1);
         else
@@ -6586,6 +6609,7 @@ end
         
         updateChanCoordsColorHighlight
         initTraces
+        load_ephys_data;
         uiresume(UI.fig);
     end
     
@@ -6626,7 +6650,8 @@ end
 
     function editElectrodeGroups(~,~)
         UI.settings.electrodeGroupsToPlot = find([UI.table.electrodeGroups.Data{:,1}]);
-        initTraces
+        initTraces;
+        load_ephys_data;
         uiresume(UI.fig);
     end
     
@@ -6634,6 +6659,7 @@ end
         brainRegions = fieldnames(data.session.brainRegions);
         UI.settings.brainRegionsToHide = brainRegions(~[UI.table.brainRegions.Data{:,1}]);
         initTraces
+        load_ephys_data;
         uiresume(UI.fig);
     end
     
@@ -6641,6 +6667,7 @@ end
         channelOrder = [data.session.extracellular.electrodeGroups.channels{:}];
         UI.settings.channelList = channelOrder(UI.listbox.channelList.Value);
         initTraces
+        load_ephys_data;
         uiresume(UI.fig);
     end
 
@@ -6656,6 +6683,7 @@ end
         end
 
         initTraces
+        load_ephys_data
         uiresume(UI.fig);
     end
     
@@ -6669,6 +6697,7 @@ end
             UI.settings.channelTags.filter = find([UI.table.channeltags.Data{:,4}]);
             UI.settings.channelTags.hide = find([UI.table.channeltags.Data{:,5}]);
             initTraces
+            load_ephys_data;
             uiresume(UI.fig);
         end
     end
