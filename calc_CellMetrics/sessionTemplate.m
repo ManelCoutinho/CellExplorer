@@ -28,7 +28,7 @@ addParameter(p,'basename',[],@isstr);
 addParameter(p,'importSkippedChannels',true,@islogical); % Import skipped channels from the xml as bad channels
 addParameter(p,'importSyncedChannels',true,@islogical);  % Import channel not synchronized between electrode groups and spike groups as bad channels
 addParameter(p,'showGUI',false,@islogical);              % Show the session gui
-addParameter(p,'srLfp',false,@islogical);                % Defaults to sample rate defined in the acquisition field
+addParameter(p,'priority','dat',@isstr);                % Defaults to sample rate defined in the acquisition field
 
 % Parsing inputs
 parse(p,input1,varargin{:})
@@ -36,7 +36,7 @@ basename = p.Results.basename;
 importSkippedChannels = p.Results.importSkippedChannels;
 importSyncedChannels = p.Results.importSyncedChannels;
 showGUI = p.Results.showGUI;
-srLfp = p.Results.srLfp;
+priority = p.Results.priority;
 
 % Initializing session struct and defining basepath, if not specified as an input
 if ischar(input1)
@@ -306,7 +306,11 @@ if (~isfield(session.general,'date') || isempty(session.general.date)) && isfiel
     session.general.date = sessionInfo.Date;
 end
 if isfield(session,'extracellular') && isfield(session.extracellular,'nChannels')
-    fileExtensions = {'.dat', '.lfp'};
+    if strcmp(priority,'dat')
+        fileExtensions = {'.dat', '.lfp'};
+    else
+        fileExtensions = {'.lfp', '.dat'};
+    end
     sampleSize = 0;
     switch session.extracellular.precision
         case {'uchar','unsigned char','schar','signed char','int8','integer*1','uint8'},
@@ -325,10 +329,10 @@ if isfield(session,'extracellular') && isfield(session.extracellular,'nChannels'
         if exist(fullpath, 'file')
             temp2_ = dir(fullpath);
             session.extracellular.nSamples = temp2_.bytes / session.extracellular.nChannels / sampleSize;
-            if srLfp
-                session.general.duration = session.extracellular.nSamples / session.extracellular.srLfp;
-            else
+            if strcmp(fileExtensions{i},'.dat')
                 session.general.duration = session.extracellular.nSamples / session.extracellular.sr;
+            else
+                session.general.duration = session.extracellular.nSamples / session.extracellular.srLfp;
             end
             break;
         end

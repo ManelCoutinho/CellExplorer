@@ -30,7 +30,6 @@ function NeuroScope2(varargin)
 % Global variables
 UI = []; % Struct with UI elements and settings
 UI.t0 = 0; % Timestamp of the start of the current window (in seconds)
-UI.srLfp = false; % Defaults lr to defined in acquisition
 data = []; % Contains all external data loaded like data.session, data.spikes, data.events, data.states, data.behavior
 ephys = []; % Struct with ephys data for current shown time interval, e.g. ephys.raw (raw unprocessed data), ephys.traces (processed data)
 ephys.traces = [];
@@ -83,7 +82,6 @@ else
     p = inputParser;
     addParameter(p,'basepath',pwd,@ischar);
     addParameter(p,'basename',[],@ischar);
-    addParameter(p,'acq',true,@islogical);
     addParameter(p,'session',[],@isstruct);
     addParameter(p,'spikes',[],@ischar);
     addParameter(p,'events',[],@ischar);
@@ -96,7 +94,6 @@ else
     parameters = p.Results;
     basepath = p.Results.basepath;
     basename = p.Results.basename;
-    UI.srLfp = ~parameters.acq;
 
     if isempty(basename)
         basename = basenameFromBasepath(basepath);
@@ -112,7 +109,6 @@ int_gt_0 = @(n,sr) (isempty(n)) || (n <= 0 ) || (n >= sr/2) || isnan(n);
 % % % % % % % % % % % % % % % % % % % % % %
 % Initialization 
 % % % % % % % % % % % % % % % % % % % % % %
-
 initUI
 initData(basepath,basename);
 initInputs
@@ -985,11 +981,6 @@ end
         % Setting booleans for validating ephys loading and plotting        
         ephys.loaded = false;
         ephys.plotted = false;
-        if UI.srLfp
-            ephys.sr = data.session.extracellular.srLfp;
-        else
-            ephys.sr = data.session.extracellular.sr;
-        end
         if UI.settings.plotStyle == 4 % lfp file
             if UI.fid.lfp == -1
                 UI.settings.stream = false;
@@ -998,6 +989,16 @@ end
                 return
             end
             fileID = UI.fid.lfp;
+            ephys.sr = data.session.extracellular.srLfp;
+        elseif UI.settings.plotStyle == 3 % raw file -> .dat
+            if UI.fid.ephys == -1
+                UI.settings.stream = false;
+                ephys.loaded = false;
+                text_center('Failed to load raw data')
+                return
+            end
+            ephys.sr = data.session.extracellular.sr;
+            fileID = UI.fid.ephys;
         elseif UI.fid.ephys == -1 && UI.settings.plotStyle == 6
             UI.settings.stream = false;
             ephys.loaded = false;
@@ -1012,6 +1013,7 @@ end
                     text_center('Failed to load LFP data')
                     return
                 end
+                ephys.sr = data.session.extracellular.srLfp;
                 fileID = UI.fid.lfp;
             else
                 if UI.fid.ephys == -1
@@ -1020,6 +1022,7 @@ end
                     text_center('Failed to load raw data')
                     return
                 end
+                ephys.sr = data.session.extracellular.sr;
                 fileID = UI.fid.ephys;
             end
         end
@@ -1037,6 +1040,10 @@ end
                 newChannels = setdiff(channelList, nanChannels);
                 if ~isempty(newChannels)
                     UI.forceNewData = true;
+                end
+                
+                if UI.samplesToDisplay ~= size(ephys.raw, 1)
+                    ephys.raw = nan(UI.samplesToDisplay, size(ephys.raw, 2)); 
                 end
             end
             
@@ -2414,9 +2421,8 @@ end
         y = [];
 
         for c = UI.channelOrder
-            %Whiten signal (using the common AR model computed for the first channel)
+            % Whiten signal (using the common AR model computed for the first channel)
             % TODO: without parameters?
-            % wx = WhitenSignal(ephys.traces(:,c), ephys.sr * 2000, 1, my_spectrogram.ARmodel);
             wx = WhitenSignal(traces(:,c), [], [], my_spectrogram.ARmodel);
                         
             %Compute PSD for WHITENED signal
@@ -2487,7 +2493,6 @@ end
             if UI.panel.my_spectrograms.fullSpectrogram.Value == 1
                 if my_spectrogram.recalculateWhiten
                     % TODO: without parameters?
-                    % wx = WhitenSignal(ephys.full, ephys.sr * 2000, 1, my_spectrogram.ARmodel);
                     ephys.wfull = WhitenSignal(ephys.full, [], [], my_spectrogram.ARmodel);
                     my_spectrogram.recalculateWhiten = false;
                 end
@@ -2495,7 +2500,6 @@ end
                 wx = ephys.wfull;
             else % Not decoupled
                 % TODO: without parameters?
-                % wx = WhitenSignal(ephys.traces(:,UI.settings.my_spectrograms.channel), ephys.sr * 2000, 1, my_spectrogram.ARmodel);
                 wx = WhitenSignal(ephys.traces(:,UI.settings.my_spectrograms.channel), [], [], my_spectrogram.ARmodel);
             end
             % TODO: different window for decouple ?
@@ -3177,12 +3181,12 @@ end
 
             s1 = dir(UI.data.fileName);
             s2 = dir(UI.data.fileNameLFP);
-            if ~isempty(s1) && ~strcmp(UI.priority,'lfp')
-                file = UI.data.fileName;
-            elseif ~isempty(s2)
-                file = UI.data.fileNameLFP;
-            end
 
+            if ~isempty(s2) && ~strcmp(UI.priority,'dat')
+                file = UI.data.fileNameLFP;
+            elseif ~isempty(s1)
+                file = UI.data.fileName;
+            end
             
             folder = 'NeuroScope2_data/ecog_videos';
             if ~exist(folder, 'dir')
@@ -3979,7 +3983,7 @@ end
     
     function initAudioDeviceWriter(~,~)
         if isToolboxInstalled('DSP System Toolbox') || isToolboxInstalled('Audio Toolbox')
-            if UI.srLfp
+            if strcmp(UI.priority,'lfp')
                 sr = data.session.extracellular.srLfp;
             else
                 sr = data.session.extracellular.sr;
@@ -5164,10 +5168,10 @@ end
         if UI.panel.my_spectrograms.fullSpectrogram.Value == 1 %isempty(ephys.full)
             s1 = dir(UI.data.fileName);
             s2 = dir(UI.data.fileNameLFP);
-            if ~isempty(s1) && ~strcmp(UI.priority,'lfp')
-                file = UI.data.fileName;
-            elseif ~isempty(s2)
+            if ~isempty(s2) && ~strcmp(UI.priority,'dat')
                 file = UI.data.fileNameLFP;
+            elseif ~isempty(s1)
+                file = UI.data.fileName;
             end
 
             disp('Loading New Channel');
@@ -5332,7 +5336,7 @@ end
                 if numeric_gt_0(channelnumber) && ismember(channelnumber, channelList)
                     UI.settings.my_spectrograms.channel = channelnumber;
                     UI.settings.showMySpectrogram = true;
-                    if channelnumber ~= my_spectrogram.channel
+                    if channelnumber ~= my_spectrogram.channel || isempty(ephys.full)
                         my_spectrogram.channel = channelnumber;
                         loadFullFile
                         my_spectrogram.recalculateWhiten = true;
@@ -5832,12 +5836,12 @@ end
         UI.channelOffset = zeros(1,data.session.extracellular.nChannels);
         UI.channelOffset(UI.channelOrder) = channelOffset-1;
         UI.ephys_offset = offset;
-        if UI.srLfp
-            UI.channelScaling = ones(ceil(UI.settings.windowDuration*data.session.extracellular.srLfp),1)*UI.channelOffset;
-            UI.samplesToDisplay = floor(UI.settings.windowDuration*data.session.extracellular.srLfp);
-        else
+        if UI.settings.plotStyle == 3
             UI.channelScaling = ones(ceil(UI.settings.windowDuration*data.session.extracellular.sr),1)*UI.channelOffset;
             UI.samplesToDisplay = floor(UI.settings.windowDuration*data.session.extracellular.sr);
+        else
+            UI.channelScaling = ones(ceil(UI.settings.windowDuration*data.session.extracellular.srLfp),1)*UI.channelOffset;
+            UI.samplesToDisplay = floor(UI.settings.windowDuration*data.session.extracellular.srLfp);
         end
 
         UI.dispSamples = floor(linspace(1,UI.samplesToDisplay,UI.Pix_SS));
@@ -5920,13 +5924,23 @@ end
         UI.data.basepath = basepath;
         UI.data.basename = basename;
         cd(UI.data.basepath)
+
+        if ~isfield(UI,'priority')
+            UI.priority = 'lfp';
+        elseif strcmpi(UI.priority,'dat')
+            UI.settings.plotStyle = 2;
+            UI.panel.general.plotStyle.Value = UI.settings.plotStyle;
+        elseif strcmpi(UI.priority,'lfp')
+            UI.settings.plotStyle = 4;
+            UI.panel.general.plotStyle.Value = UI.settings.plotStyle;
+        end
         
         if ~isfield(data,'session') && exist(fullfile(basepath,[basename,'.session.mat']),'file')
             data.session = loadSession(UI.data.basepath,UI.data.basename);
         elseif ~isfield(data,'session') && exist(fullfile(basepath,[basename,'.xml']),'file')
-            data.session = sessionTemplate(UI.data.basepath,'showGUI',false,'basename',basename,'srLfp',UI.srLfp);
+            data.session = sessionTemplate(UI.data.basepath,'showGUI',false,'basename',basename,'priority',UI.priority);
         elseif ~isfield(data,'session')
-            data.session = sessionTemplate(UI.data.basepath,'showGUI',true,'basename',basename,'srLfp',UI.srLfp);
+            data.session = sessionTemplate(UI.data.basepath,'showGUI',true,'basename',basename,'priority',UI.priority);
         end
         
         % Loading preferences from session struct
@@ -5992,7 +6006,7 @@ end
         end
         
         % Default number of channels
-        UI.panel.general.sparsify.Value = min(floor(data.session.extracellular.nChannels / 256), length(UI.panel.general.sparsify.String));
+        UI.panel.general.sparsify.Value = min(max(1, floor(data.session.extracellular.nChannels / 256)), length(UI.panel.general.sparsify.String));
         sparsifyChannels;
         updateElectrodeGroupsList
         updateChannelTags
@@ -6025,33 +6039,9 @@ end
         end
         UI.fid.lfp = fopen(UI.data.fileNameLFP, 'r');
         s2 = dir(UI.data.fileNameLFP);
-            
-        if ~isfield(UI,'priority')
-            UI.priority = 'dat';
-        elseif strcmpi(UI.priority,'dat')
-            UI.settings.plotStyle = 2;
-            UI.panel.general.plotStyle.Value = UI.settings.plotStyle;
-        elseif strcmpi(UI.priority,'lfp')
-            UI.settings.plotStyle = 4;
-            UI.panel.general.plotStyle.Value = UI.settings.plotStyle;
-        end        
-        if UI.srLfp
+
+        if ~isempty(s2) && ~strcmp(UI.priority,'dat')
             sr = data.session.extracellular.srLfp;
-        else
-            sr = data.session.extracellular.sr;
-        end
-
-        if ~isempty(s1) && ~strcmp(UI.priority,'lfp')
-            filesize = s1.bytes;
-            UI.t_total = filesize/(data.session.extracellular.nChannels*sr*2);
-
-            nSamples = floor((filesize/data.session.extracellular.nChannels/datatypesize(UI.settings.precision)));
-            UI.mmap = memmapfile(UI.data.fileName, 'format',{UI.settings.precision [data.session.extracellular.nChannels nSamples] 'x'},'offset', 0, 'repeat',1);
-            ephys.full = UI.mmap.Data.x(my_spectrogram.channel,:)';
-            % TODO: decide parameters
-            [~, my_spectrogram.ARmodel] = WhitenSignal(ephys.full, sr * 2000, 1);
-        elseif ~isempty(s2)
-            UI.priority = 'lfp';
             filesize = s2.bytes;
             UI.t_total = filesize/(data.session.extracellular.nChannels*sr*2);
             UI.settings.plotStyle = 4;
@@ -6059,9 +6049,18 @@ end
 
             nSamples = floor((filesize/data.session.extracellular.nChannels/datatypesize(UI.settings.precision)));
             UI.mmap = memmapfile(UI.data.fileNameLFP, 'format',{UI.settings.precision [data.session.extracellular.nChannels nSamples] 'x'},'offset', 0, 'repeat',1);
-            ephys.full = UI.mmap.Data.x(my_spectrogram.channel,:)';
-            % TODO: decide parameters
-            [~, my_spectrogram.ARmodel] = WhitenSignal(ephys.full, sr * 2000, 1);
+            whitenSamples = sr * 100;
+            [~, my_spectrogram.ARmodel] = WhitenSignal(UI.mmap.Data.x(my_spectrogram.channel,1:whitenSamples)', whitenSamples, 1);
+        elseif ~isempty(s1)
+            UI.priority = 'dat';
+            sr = data.session.extracellular.sr;
+            filesize = s1.bytes;
+            UI.t_total = filesize/(data.session.extracellular.nChannels*sr*2);
+
+            nSamples = floor((filesize/data.session.extracellular.nChannels/datatypesize(UI.settings.precision)));
+            UI.mmap = memmapfile(UI.data.fileName, 'format',{UI.settings.precision [data.session.extracellular.nChannels nSamples] 'x'},'offset', 0, 'repeat',1);
+            whitenSamples = sr * 100;
+            [~, my_spectrogram.ARmodel] = WhitenSignal(UI.mmap.Data.x(my_spectrogram.channel,1:whitenSamples)', whitenSamples, 1);
         else
             warning('NeuroScope2: Binary data does not exist')
         end
@@ -6202,16 +6201,13 @@ end
         UI.settings.stream = false;
         s1 = dir(UI.data.fileName);
         s2 = dir(UI.data.fileNameLFP);
-        if UI.srLfp
+        if ~isempty(s2) && ~strcmp(UI.priority,'dat')
             sr = data.session.extracellular.srLfp;
-        else
-            sr = data.session.extracellular.sr;
-        end
-        if ~isempty(s1) && ~strcmp(UI.priority,'lfp')
-            filesize = s1.bytes;
-            UI.t_total = filesize/(data.session.extracellular.nChannels*sr*2);
-        elseif ~isempty(s2)
             filesize = s2.bytes;
+            UI.t_total = filesize/(data.session.extracellular.nChannels*sr*2);
+        elseif ~isempty(s1)
+            sr = data.session.extracellular.sr;
+            filesize = s1.bytes;
             UI.t_total = filesize/(data.session.extracellular.nChannels*sr*2);
         end        
     end
@@ -6763,6 +6759,27 @@ end
     end
 
     function changePlotStyle(~,~)
+        if UI.panel.general.plotStyle.Value == 3 && UI.settings.plotStyle ~= 3
+            s1 = dir(UI.data.fileName);
+            if isempty(s1)
+                UI.settings.stream = false;
+                ephys.loaded = false;
+                text_center('Failed to load raw data')
+                return
+            end
+            nSamples = floor((s1.bytes/data.session.extracellular.nChannels/datatypesize(UI.settings.precision)));
+            UI.mmap = memmapfile(UI.data.fileName, 'format',{UI.settings.precision [data.session.extracellular.nChannels nSamples] 'x'},'offset', 0, 'repeat',1);
+        elseif UI.panel.general.plotStyle.Value ~=3 && UI.settings.plotStyle == 3
+            s2 = dir(UI.data.fileNameLFP);
+            if isempty(s2)
+                UI.settings.stream = false;
+                ephys.loaded = false;
+                text_center('Failed to load ephys data')
+                return
+            end
+            nSamples = floor((s2.bytes/data.session.extracellular.nChannels/datatypesize(UI.settings.precision)));
+            UI.mmap = memmapfile(UI.data.fileName, 'format',{UI.settings.precision [data.session.extracellular.nChannels nSamples] 'x'},'offset', 0, 'repeat',1);
+        end
         UI.settings.plotStyle = UI.panel.general.plotStyle.Value;
         initTraces
         UI.forceNewData = true;
@@ -8507,7 +8524,7 @@ end
         % 2: Show msg dialog
         % 3: Show warning in Command Window
         % 4: Show warning dialog
-        % -1: disp only
+        % -1: disp onlym
         UI.settings.stream = false;
         timestamp = datetime('now','TimeZone','local','Format','dd-MM-yyyy HH:mm:ss');
         message2 = sprintf('[%s] %s', timestamp, message);
