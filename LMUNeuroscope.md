@@ -148,6 +148,9 @@ This option can be found in the General Tab of the left sidebar, under the ```Ex
 **Saving Module:**   
 [This](lmuLab/saving/) module was created so that different spectrogram calculations could be saved and fetched at will in order to improve the performance of the program by avoiding repetitive and costly operations. Specially used for the [Clustering](#clustering). All the files will be saved in the basepath inside the ```NeuroScope2_data``` folder.
 
+**Loading Data:**   
+Loading Data is now done via [memory mapping](https://de.mathworks.com/help/matlab/ref/memmapfile.html) and only for the specific necessary channels. By defautl, only 256 channels will be loaded but the user can specify more on the explained ```Sparsify``` dropdown.
+
 
 ## Matlab data structures
 ### States
