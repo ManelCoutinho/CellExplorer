@@ -1028,7 +1028,7 @@ end
             channelList = [UI.channels{UI.settings.electrodeGroupsToPlot}];
             totalChannels = 1:data.session.extracellular.nChannels;
             channelsToHide = setdiff(totalChannels, channelList);
-            if ~isempty(channelsToHide)
+            if ~isempty(channelsToHide) && isfield(ephys, 'raw')
                 ephys.raw(:, channelsToHide) = NaN;
             end
                    
@@ -5991,6 +5991,9 @@ end
             UI.panel.notes.text.String = data.session.general.notes;
         end
         
+        % Default number of channels
+        UI.panel.general.sparsify.Value = min(floor(data.session.extracellular.nChannels / 256), length(UI.panel.general.sparsify.String));
+        sparsifyChannels;
         updateElectrodeGroupsList
         updateChannelTags
         updateChannelList
@@ -6671,7 +6674,7 @@ end
         uiresume(UI.fig);
     end
 
-    function sparsifyChannels(~,~)
+    function sparsifyChannels(varargin)
         UI.settings.sparsify = UI.panel.general.sparsify.Value;
 
         numGroups = numel(data.session.extracellular.electrodeGroups.channels);
@@ -6681,10 +6684,11 @@ end
             channelIndices = 1:UI.settings.sparsify:size(data.session.extracellular.electrodeGroups.channels{i}, 2);
             UI.settings.sparseChannels{i} = data.session.extracellular.electrodeGroups.channels{i}(:, channelIndices);
         end
-
-        initTraces
-        load_ephys_data
-        uiresume(UI.fig);
+        if length(varargin) == 2
+            initTraces
+            load_ephys_data
+            uiresume(UI.fig);            
+        end
     end
     
     function editChannelTags(~,evnt)
